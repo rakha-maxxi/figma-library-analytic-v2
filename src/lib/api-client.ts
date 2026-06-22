@@ -421,7 +421,6 @@ function clearNotifStorage(workspaceId: string) {
   if (typeof window === "undefined") return;
   try {
     window.localStorage.removeItem(`${NOTIF_LIST_KEY}:${workspaceId}`);
-    window.localStorage.removeItem(`${NOTIF_SEEN_KEY}:${workspaceId}`);
   } catch {
     /* ignore */
   }
@@ -559,7 +558,6 @@ export function useScanNotifications(workspaceId: string | null) {
 
   const clear = React.useCallback(() => {
     notifState = { notifications: [], unreadCount: 0 };
-    notifSeen = new Set();
     if (workspaceId) {
       clearNotifStorage(workspaceId);
     }
