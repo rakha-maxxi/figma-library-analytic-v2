@@ -284,7 +284,9 @@ export function useScans(
   return useQuery({
     queryKey: qk.scans(params),
     queryFn: () => get<{ total: number; items: ScanItem[] }>(`/api/scans${search ? `?${search}` : ""}`),
-    refetchInterval: options.refetchInterval as any,
+    refetchInterval: options.refetchInterval
+      ? (query: any) => options.refetchInterval!(query?.state?.data)
+      : undefined,
   });
 }
 

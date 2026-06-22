@@ -3,20 +3,24 @@ import { runScan, triggerScanInBackground } from "@/lib/scan-worker";
 
 /** Auto-recover scans stuck in Pending/Running for more than 5 minutes. */
 async function recoverStuckScans(workspaceId: string) {
-  const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000);
-  await db.scanJob.updateMany({
-    where: {
-      workspaceId,
-      status: { in: ["Pending", "Running"] },
-      startedAt: { lt: fiveMinAgo },
-    },
-    data: {
-      status: "Failed",
-      error: "Scan timed out (serverless function was likely killed before completion).",
-      finishedAt: new Date(),
-      durationMs: 5 * 60 * 1000,
-    },
-  });
+  try {
+    const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000);
+    await db.scanJob.updateMany({
+      where: {
+        workspaceId,
+        status: { in: ["Pending", "Running"] },
+        startedAt: { lt: fiveMinAgo },
+      },
+      data: {
+        status: "Failed",
+        error: "Scan timed out (serverless function was likely killed before completion).",
+        finishedAt: new Date(),
+        durationMs: 5 * 60 * 1000,
+      },
+    });
+  } catch {
+    // Non-critical: don't let recovery failure block the scans list.
+  }
 }
 
 /**
