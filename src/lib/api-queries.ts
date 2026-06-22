@@ -4,6 +4,10 @@ import { db } from "@/lib/db";
  * Workspace-scoped query helpers. Every helper takes a `workspaceId` and
  * only returns rows that belong to that workspace — the multi-tenant guarantee
  * is enforced at the Prisma `where` level, not at the call site.
+ *
+ * Performance: helpers accept optional pre-fetched data (latest snapshot,
+ * thresholds) so callers that need multiple helpers can fetch shared data
+ * once and pass it through, avoiding duplicate round-trips.
  */
 
 export type ComponentWithUsage = {
@@ -32,6 +36,9 @@ export type FileWithUsage = {
   lastScanned: Date | null;
 };
 
+type SnapshotData = Awaited<ReturnType<typeof db.snapshot.findFirst>>;
+type ThresholdData = { lowUsage: number; staleDays: number };
+
 /** Latest successful snapshot for the workspace. */
 export async function getLatestSnapshot(workspaceId: string) {
   return db.snapshot.findFirst({
@@ -52,7 +59,7 @@ export async function getPreviousSnapshot(workspaceId: string) {
 }
 
 /** Threshold settings (workspace-scoped). */
-export async function getThresholds(workspaceId: string) {
+export async function getThresholds(workspaceId: string): Promise<ThresholdData> {
   const rows = await db.setting.findMany({
     where: { workspaceId, key: { in: ["low_usage_threshold", "stale_days_threshold"] } },
   });
@@ -91,13 +98,62 @@ export function computeFileStatus(
   return "Healthy";
 }
 
+type ComponentUsageAgg = { componentId: string; totalInstances: number; filesUsed: number };
+
+async function getComponentUsageAgg(snapshotId: string): Promise<Map<string, ComponentUsageAgg>> {
+  const [sums, fileCounts] = await Promise.all([
+    db.componentUsage.groupBy({
+      by: ["componentId"],
+      where: { snapshotId },
+      _sum: { instances: true },
+    }),
+    db.$queryRaw<{ componentId: string; filesUsed: number }[]>`
+      SELECT "componentId", COUNT(DISTINCT "fileId") AS "filesUsed"
+      FROM component_usages
+      WHERE "snapshotId" = ${snapshotId}
+      GROUP BY "componentId"
+    `,
+  ]);
+
+  const map = new Map<string, ComponentUsageAgg>();
+  for (const s of sums) {
+    map.set(s.componentId, {
+      componentId: s.componentId,
+      totalInstances: s._sum.instances ?? 0,
+      filesUsed: 0,
+    });
+  }
+  for (const f of fileCounts) {
+    const entry = map.get(f.componentId);
+    if (entry) entry.filesUsed = Number(f.filesUsed);
+  }
+  return map;
+}
+
+type FileUsageAgg = { fileId: string; totalInstances: number; uniqueComponents: number };
+
+async function getFileUsageAgg(snapshotId: string): Promise<Map<string, FileUsageAgg>> {
+  const rows = await db.$queryRaw<{ fileId: string; totalInstances: number; uniqueComponents: number }[]>`
+    SELECT "fileId", SUM(instances) AS "totalInstances", COUNT(DISTINCT "componentId") AS "uniqueComponents"
+    FROM component_usages
+    WHERE "snapshotId" = ${snapshotId}
+    GROUP BY "fileId"
+  `;
+  return new Map(rows.map((r) => [r.fileId, { ...r, totalInstances: Number(r.totalInstances), uniqueComponents: Number(r.uniqueComponents) }]));
+}
+
 /** Component list with usage computed from the workspace's latest snapshot. */
 export async function getComponentsWithUsage(
-  workspaceId: string
+  workspaceId: string,
+  opts?: {
+    latest?: SnapshotData;
+    previous?: SnapshotData | null;
+    lowUsage?: number;
+  }
 ): Promise<ComponentWithUsage[]> {
-  const latest = await getLatestSnapshot(workspaceId);
-  const previous = await getPreviousSnapshot(workspaceId);
-  const { lowUsage } = await getThresholds(workspaceId);
+  const latest = opts?.latest ?? await getLatestSnapshot(workspaceId);
+  const previous = opts?.previous ?? await getPreviousSnapshot(workspaceId);
+  const lowUsage = opts?.lowUsage ?? (await getThresholds(workspaceId)).lowUsage;
 
   const components = await db.component.findMany({
     where: { workspaceId },
@@ -119,34 +175,26 @@ export async function getComponentsWithUsage(
     }));
   }
 
-  const latestUsages = await db.componentUsage.findMany({
-    where: { snapshotId: latest.id },
-  });
-  const prevUsages = previous
-    ? await db.componentUsage.findMany({ where: { snapshotId: previous.id } })
-    : [];
-
-  const latestByComp = new Map<string, { total: number; files: Set<string>; lastSeen: Date }>();
-  for (const u of latestUsages) {
-    const entry = latestByComp.get(u.componentId) ?? {
-      total: 0,
-      files: new Set<string>(),
-      lastSeen: latest.at,
-    };
-    entry.total += u.instances;
-    entry.files.add(u.fileId);
-    latestByComp.set(u.componentId, entry);
-  }
+  const [latestAgg, prevAgg] = await Promise.all([
+    getComponentUsageAgg(latest.id),
+    previous
+      ? db.componentUsage.groupBy({
+          by: ["componentId"],
+          where: { snapshotId: previous.id },
+          _sum: { instances: true },
+        })
+      : Promise.resolve([]),
+  ]);
 
   const prevByComp = new Map<string, number>();
-  for (const u of prevUsages) {
-    prevByComp.set(u.componentId, (prevByComp.get(u.componentId) ?? 0) + u.instances);
+  for (const p of prevAgg) {
+    prevByComp.set(p.componentId, p._sum.instances ?? 0);
   }
 
   return components.map((c) => {
-    const entry = latestByComp.get(c.id);
-    const totalInstances = entry?.total ?? 0;
-    const filesUsed = entry?.files.size ?? 0;
+    const entry = latestAgg.get(c.id);
+    const totalInstances = entry?.totalInstances ?? 0;
+    const filesUsed = entry?.filesUsed ?? 0;
     return {
       id: c.id,
       name: c.name,
@@ -163,31 +211,40 @@ export async function getComponentsWithUsage(
 }
 
 /** File list with adoption computed from the workspace's latest snapshot. */
-export async function getFilesWithUsage(workspaceId: string): Promise<FileWithUsage[]> {
-  const latest = await getLatestSnapshot(workspaceId);
-  const { staleDays } = await getThresholds(workspaceId);
-
-  const files = await db.registeredFile.findMany({
-    where: { workspaceId },
-    orderBy: { name: "asc" },
-  });
-
-  const allScans = await db.scanJob.findMany({
-    where: { workspaceId },
-    orderBy: { startedAt: "desc" },
-  });
-  const lastScanByFile = new Map<string, { at: Date | null; failed: boolean }>();
-  for (const s of allScans) {
-    if (s.scope === "single" && s.targetFileId) {
-      if (!lastScanByFile.has(s.targetFileId)) {
-        lastScanByFile.set(s.targetFileId, {
-          at: s.finishedAt,
-          failed: s.status === "Failed",
-        });
-      }
-    }
+export async function getFilesWithUsage(
+  workspaceId: string,
+  opts?: {
+    latest?: SnapshotData;
+    staleDays?: number;
   }
-  const lastAllScan = allScans.find((s) => s.scope === "all" && s.status === "Success");
+): Promise<FileWithUsage[]> {
+  const latest = opts?.latest ?? await getLatestSnapshot(workspaceId);
+  const staleDays = opts?.staleDays ?? (await getThresholds(workspaceId)).staleDays;
+
+  const [files, lastAllScan, recentSingleScans] = await Promise.all([
+    db.registeredFile.findMany({
+      where: { workspaceId },
+      orderBy: { name: "asc" },
+    }),
+    db.scanJob.findFirst({
+      where: { workspaceId, scope: "all", status: "Success" },
+      orderBy: { startedAt: "desc" },
+    }),
+    db.$queryRaw<{ targetFileId: string; finishedAt: Date | null; status: string }[]>`
+      SELECT DISTINCT ON ("targetFileId") "targetFileId", "finishedAt", "status"
+      FROM scan_jobs
+      WHERE "workspaceId" = ${workspaceId} AND scope = 'single' AND "targetFileId" IS NOT NULL
+      ORDER BY "targetFileId", "startedAt" DESC
+    `,
+  ]);
+
+  const lastScanByFile = new Map<string, { at: Date | null; failed: boolean }>();
+  for (const s of recentSingleScans) {
+    lastScanByFile.set(s.targetFileId, {
+      at: s.finishedAt,
+      failed: s.status === "Failed",
+    });
+  }
 
   if (!latest) {
     return files.map((f) => ({
@@ -204,22 +261,12 @@ export async function getFilesWithUsage(workspaceId: string): Promise<FileWithUs
     }));
   }
 
-  const latestUsages = await db.componentUsage.findMany({
-    where: { snapshotId: latest.id },
-  });
-
-  const byFile = new Map<string, { total: number; components: Set<string> }>();
-  for (const u of latestUsages) {
-    const entry = byFile.get(u.fileId) ?? { total: 0, components: new Set<string>() };
-    entry.total += u.instances;
-    entry.components.add(u.componentId);
-    byFile.set(u.fileId, entry);
-  }
+  const byFile = await getFileUsageAgg(latest.id);
 
   return files.map((f) => {
     const entry = byFile.get(f.id);
-    const totalInstances = entry?.total ?? 0;
-    const uniqueComponents = entry?.components.size ?? 0;
+    const totalInstances = entry?.totalInstances ?? 0;
+    const uniqueComponents = entry?.uniqueComponents ?? 0;
     const single = lastScanByFile.get(f.id);
     const lastScanned = single?.at ?? lastAllScan?.finishedAt ?? null;
     const hasFailed = single?.failed ?? false;

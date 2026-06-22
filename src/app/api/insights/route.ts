@@ -3,17 +3,32 @@ import {
   getComponentsWithUsage,
   getFilesWithUsage,
   getLatestSnapshot,
+  getPreviousSnapshot,
   getThresholds,
 } from "@/lib/api-queries";
 
 /**
  * GET /api/insights
+ *
+ * Performance: fetches shared data once and passes it to helpers,
+ * running them in parallel to minimize DB round-trips.
  */
 export const GET = withWorkspace(async (_req, ctx) => {
-  const components = await getComponentsWithUsage(ctx.workspaceId);
-  const files = await getFilesWithUsage(ctx.workspaceId);
-  const { lowUsage, staleDays } = await getThresholds(ctx.workspaceId);
-  const latest = await getLatestSnapshot(ctx.workspaceId);
+  const [latest, previous, thresholds] = await Promise.all([
+    getLatestSnapshot(ctx.workspaceId),
+    getPreviousSnapshot(ctx.workspaceId),
+    getThresholds(ctx.workspaceId),
+  ]);
+
+  const [components, files, failedScans] = await Promise.all([
+    getComponentsWithUsage(ctx.workspaceId, { latest, previous, lowUsage: thresholds.lowUsage }),
+    getFilesWithUsage(ctx.workspaceId, { latest, staleDays: thresholds.staleDays }),
+    db.scanJob.findMany({
+      where: { workspaceId: ctx.workspaceId, status: "Failed" },
+      orderBy: { startedAt: "desc" },
+      include: { targetFile: true },
+    }),
+  ]);
 
   const unused = components
     .filter((c) => c.status === "Unused")
@@ -50,12 +65,6 @@ export const GET = withWorkspace(async (_req, ctx) => {
       lastScanned: f.lastScanned,
     }));
 
-  const failedScans = await db.scanJob.findMany({
-    where: { workspaceId: ctx.workspaceId, status: "Failed" },
-    orderBy: { startedAt: "desc" },
-    include: { targetFile: true },
-  });
-
   let recentChanges: any[] = [];
   if (latest) {
     const changes = await db.change.findMany({
@@ -76,7 +85,7 @@ export const GET = withWorkspace(async (_req, ctx) => {
   }
 
   return json({
-    thresholds: { lowUsage, staleDays },
+    thresholds: { lowUsage: thresholds.lowUsage, staleDays: thresholds.staleDays },
     lastScanLabel: latest?.label ?? null,
     summary: {
       unused: unused.length,

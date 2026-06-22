@@ -1,22 +1,30 @@
 import { db, json, withWorkspace } from "@/lib/api";
-import { getFilesWithUsage, getLatestSnapshot } from "@/lib/api-queries";
+import {
+  computeFileStatus,
+  getLatestSnapshot,
+  getThresholds,
+} from "@/lib/api-queries";
 
 /**
  * GET /api/files/:id
  * File detail scoped to the active workspace.
+ *
+ * Performance: queries only this file's data instead of loading all
+ * files via getFilesWithUsage.
  */
 export const GET = withWorkspace(
   async (_req, ctx, { params }: { params: Promise<{ id: string }> }) => {
     const { id } = await params;
-    const file = await db.registeredFile.findFirst({
-      where: { id, workspaceId: ctx.workspaceId },
-    });
+
+    const [file, latest, thresholds] = await Promise.all([
+      db.registeredFile.findFirst({ where: { id, workspaceId: ctx.workspaceId } }),
+      getLatestSnapshot(ctx.workspaceId),
+      getThresholds(ctx.workspaceId),
+    ]);
     if (!file) return json({ error: "File not found" }, 404);
 
-    const allFiles = await getFilesWithUsage(ctx.workspaceId);
-    const summary = allFiles.find((f) => f.id === id);
-    const latest = await getLatestSnapshot(ctx.workspaceId);
-
+    let totalInstances = 0;
+    let uniqueComponents = 0;
     let componentsUsed: {
       componentId: string;
       componentName: string;
@@ -25,11 +33,34 @@ export const GET = withWorkspace(
       instances: number;
       page: string | null;
     }[] = [];
+
+    const [lastSingleScan, lastAllScan] = await Promise.all([
+      db.scanJob.findFirst({
+        where: { workspaceId: ctx.workspaceId, scope: "single", targetFileId: id },
+        orderBy: { startedAt: "desc" },
+      }),
+      db.scanJob.findFirst({
+        where: { workspaceId: ctx.workspaceId, scope: "all", status: "Success" },
+        orderBy: { startedAt: "desc" },
+      }),
+    ]);
+
     if (latest) {
-      const usages = await db.componentUsage.findMany({
-        where: { snapshotId: latest.id, fileId: id },
-        include: { component: true },
-      });
+      const [agg, usages] = await Promise.all([
+        db.$queryRaw<{ totalInstances: number; uniqueComponents: number }[]>`
+          SELECT SUM(instances) AS "totalInstances", COUNT(DISTINCT "componentId") AS "uniqueComponents"
+          FROM component_usages
+          WHERE "snapshotId" = ${latest.id} AND "fileId" = ${id}
+        `,
+        db.componentUsage.findMany({
+          where: { snapshotId: latest.id, fileId: id },
+          include: { component: true },
+        }),
+      ]);
+
+      totalInstances = Number(agg[0]?.totalInstances ?? 0);
+      uniqueComponents = Number(agg[0]?.uniqueComponents ?? 0);
+
       componentsUsed = usages
         .map((u) => ({
           componentId: u.component.id,
@@ -38,10 +69,12 @@ export const GET = withWorkspace(
           componentStatus: "Tracked",
           instances: u.instances,
           page: u.page,
-          figmaNodeKey: u.component.figmaNodeKey,
         }))
         .sort((a, b) => b.instances - a.instances);
     }
+
+    const lastScanned = lastSingleScan?.finishedAt ?? lastAllScan?.finishedAt ?? null;
+    const hasFailed = lastSingleScan?.status === "Failed";
 
     return json({
       id: file.id,
@@ -52,10 +85,10 @@ export const GET = withWorkspace(
       disabled: file.disabled,
       createdAt: file.createdAt,
       updatedAt: file.updatedAt,
-      totalInstances: summary?.totalInstances ?? 0,
-      uniqueComponents: summary?.uniqueComponents ?? 0,
-      status: summary?.status ?? "Not Scanned",
-      lastScanned: summary?.lastScanned ?? null,
+      totalInstances,
+      uniqueComponents,
+      status: computeFileStatus(uniqueComponents, lastScanned, hasFailed, thresholds.staleDays, file.disabled),
+      lastScanned,
       componentsUsed,
     });
   }
