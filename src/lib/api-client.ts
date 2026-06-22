@@ -332,7 +332,10 @@ export type ScanNotification = {
 };
 
 const NOTIF_MAX = 50;
-const NOTIF_STORAGE_PREFIX = "componently.scanNotif.lastSeenAt";
+const NOTIF_STORAGE_PREFIX = "componently.scanNotif";
+const NOTIF_SEEN_KEY = `${NOTIF_STORAGE_PREFIX}.seen`;
+const NOTIF_LIST_KEY = `${NOTIF_STORAGE_PREFIX}.list`;
+const NOTIF_LASTSEEN_KEY = `${NOTIF_STORAGE_PREFIX}.lastSeenAt`;
 
 type NotifState = {
   notifications: ScanNotification[];
@@ -342,6 +345,7 @@ type NotifState = {
 const notifListeners = new Set<(state: NotifState) => void>();
 let notifState: NotifState = { notifications: [], unreadCount: 0 };
 let notifSeen = new Set<string>();
+let notifInitialized = false;
 
 function emitNotif() {
   for (const listener of notifListeners) listener(notifState);
@@ -350,7 +354,7 @@ function emitNotif() {
 function getLastSeenAt(workspaceId: string): number {
   if (typeof window === "undefined") return 0;
   try {
-    const raw = window.sessionStorage.getItem(`${NOTIF_STORAGE_PREFIX}:${workspaceId}`);
+    const raw = window.localStorage.getItem(`${NOTIF_LASTSEEN_KEY}:${workspaceId}`);
     return raw ? Number(raw) : 0;
   } catch {
     return 0;
@@ -360,9 +364,59 @@ function getLastSeenAt(workspaceId: string): number {
 function writeLastSeenAt(workspaceId: string, value: number) {
   if (typeof window === "undefined") return;
   try {
-    window.sessionStorage.setItem(`${NOTIF_STORAGE_PREFIX}:${workspaceId}`, String(value));
+    window.localStorage.setItem(`${NOTIF_LASTSEEN_KEY}:${workspaceId}`, String(value));
   } catch {
     /* ignore quota errors */
+  }
+}
+
+function loadNotifSeen(workspaceId: string): Set<string> {
+  if (typeof window === "undefined") return new Set();
+  try {
+    const raw = window.localStorage.getItem(`${NOTIF_SEEN_KEY}:${workspaceId}`);
+    if (!raw) return new Set();
+    return new Set(JSON.parse(raw) as string[]);
+  } catch {
+    return new Set();
+  }
+}
+
+function saveNotifSeen(workspaceId: string, seen: Set<string>) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(`${NOTIF_SEEN_KEY}:${workspaceId}`, JSON.stringify([...seen]));
+  } catch {
+    /* ignore quota errors */
+  }
+}
+
+function loadNotifList(workspaceId: string): ScanNotification[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(`${NOTIF_LIST_KEY}:${workspaceId}`);
+    if (!raw) return [];
+    return JSON.parse(raw) as ScanNotification[];
+  } catch {
+    return [];
+  }
+}
+
+function saveNotifList(workspaceId: string, list: ScanNotification[]) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(`${NOTIF_LIST_KEY}:${workspaceId}`, JSON.stringify(list.slice(0, NOTIF_MAX)));
+  } catch {
+    /* ignore quota errors */
+  }
+}
+
+function clearNotifStorage(workspaceId: string) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.removeItem(`${NOTIF_LIST_KEY}:${workspaceId}`);
+    window.localStorage.removeItem(`${NOTIF_SEEN_KEY}:${workspaceId}`);
+  } catch {
+    /* ignore */
   }
 }
 
@@ -381,11 +435,12 @@ function buildScanMessage(scan: ScanItem): { kind: ScanNotificationKind; message
   };
 }
 
-function pushScanNotification(notification: ScanNotification) {
+function pushScanNotification(notification: ScanNotification, workspaceId: string) {
   notifState = {
     notifications: [notification, ...notifState.notifications].slice(0, NOTIF_MAX),
     unreadCount: notifState.unreadCount,
   };
+  saveNotifList(workspaceId, notifState.notifications);
   emitNotif();
 }
 
@@ -398,8 +453,9 @@ function recomputeUnread(workspaceId: string) {
 
 /**
  * Watch the scans query and emit a toast + history entry when a scan
- * transitions to `Success` or `Failed`. Also keeps a small in-memory
- * notification list and an unread count.
+ * transitions to `Success` or `Failed`. Also keeps a notification list
+ * and unread count, both persisted to localStorage so they survive
+ * page refreshes.
  *
  * The hook should be mounted once in a top-level component (the topbar).
  */
@@ -419,6 +475,18 @@ export function useScanNotifications(workspaceId: string | null) {
     };
   }, []);
 
+  // Load persisted state once when workspaceId is first available.
+  React.useEffect(() => {
+    if (!workspaceId || notifInitialized) return;
+    notifInitialized = true;
+    notifSeen = loadNotifSeen(workspaceId);
+    const persisted = loadNotifList(workspaceId);
+    if (persisted.length > 0) {
+      notifState = { notifications: persisted, unreadCount: 0 };
+      recomputeUnread(workspaceId);
+    }
+  }, [workspaceId]);
+
   React.useEffect(() => {
     if (!workspaceId) return;
     const data = scansQuery.data;
@@ -428,6 +496,7 @@ export function useScanNotifications(workspaceId: string | null) {
     for (const scan of data.items) {
       if (notifSeen.has(scan.id)) continue;
       notifSeen.add(scan.id);
+      saveNotifSeen(workspaceId, notifSeen);
       if (scan.status !== "Success" && scan.status !== "Failed") continue;
 
       const meta = buildScanMessage(scan);
@@ -441,7 +510,7 @@ export function useScanNotifications(workspaceId: string | null) {
         message: meta.message,
         createdAt: Date.now(),
       };
-      pushScanNotification(notification);
+      pushScanNotification(notification, workspaceId);
       changed = true;
 
       const description =
@@ -462,7 +531,6 @@ export function useScanNotifications(workspaceId: string | null) {
     if (changed) {
       recomputeUnread(workspaceId);
     } else {
-      // Always recompute on first load so unread count reflects current state.
       recomputeUnread(workspaceId);
     }
   }, [scansQuery.data, workspaceId]);
@@ -476,10 +544,25 @@ export function useScanNotifications(workspaceId: string | null) {
 
   const clear = React.useCallback(() => {
     notifState = { notifications: [], unreadCount: 0 };
+    notifSeen = new Set();
+    if (workspaceId) {
+      clearNotifStorage(workspaceId);
+    }
     emitNotif();
-  }, []);
+  }, [workspaceId]);
 
-  return { ...state, markAllRead, clear };
+  const dismiss = React.useCallback((id: string) => {
+    notifState = {
+      notifications: notifState.notifications.filter((n) => n.id !== id),
+      unreadCount: notifState.unreadCount,
+    };
+    if (workspaceId) {
+      saveNotifList(workspaceId, notifState.notifications);
+    }
+    emitNotif();
+  }, [workspaceId]);
+
+  return { ...state, markAllRead, clear, dismiss };
 }
 
 /* -------------------------------------------------------------------------- */

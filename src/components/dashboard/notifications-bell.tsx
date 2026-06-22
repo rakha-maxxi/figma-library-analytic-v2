@@ -6,6 +6,7 @@ import {
   Check,
   CheckCircle2,
   XCircle,
+  X,
   Inbox,
 } from "lucide-react";
 import {
@@ -26,7 +27,7 @@ import { cn } from "@/lib/utils";
  */
 export function NotificationsBell() {
   const { user } = useAuth();
-  const { notifications, unreadCount, markAllRead, clear } = useScanNotifications(
+  const { notifications, unreadCount, markAllRead, clear, dismiss } = useScanNotifications(
     user?.workspaceId ?? null
   );
 
@@ -90,7 +91,7 @@ export function NotificationsBell() {
           ) : (
             <ul className="divide-y divide-border/60">
               {notifications.map((n) => (
-                <NotificationRow key={n.id} notification={n} />
+                <NotificationRow key={n.id} notification={n} onDismiss={dismiss} />
               ))}
             </ul>
           )}
@@ -109,10 +110,16 @@ export function NotificationsBell() {
   );
 }
 
-function NotificationRow({ notification }: { notification: ScanNotification }) {
+function NotificationRow({
+  notification,
+  onDismiss,
+}: {
+  notification: ScanNotification;
+  onDismiss: (id: string) => void;
+}) {
   const isSuccess = notification.kind === "success";
   return (
-    <li className="flex gap-2.5 px-3 py-2.5">
+    <li className="group flex gap-2.5 px-3 py-2.5">
       <span
         className={cn(
           "mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-md",
@@ -144,6 +151,14 @@ function NotificationRow({ notification }: { notification: ScanNotification }) {
           {notification.message}
         </div>
       </div>
+      <button
+        type="button"
+        onClick={() => onDismiss(notification.id)}
+        className="mt-0.5 shrink-0 text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover:opacity-100"
+        aria-label="Dismiss notification"
+      >
+        <X className="size-3.5" />
+      </button>
     </li>
   );
 }
