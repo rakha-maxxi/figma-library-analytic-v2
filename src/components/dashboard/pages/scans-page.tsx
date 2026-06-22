@@ -31,7 +31,17 @@ const STATUS_ICON: Record<ScanStatus, typeof Check> = {
 };
 
 export function ScansPage() {
-  const { data: scansData, isLoading, isError, error, refetch } = useScans({});
+  const { data: scansData, isLoading, isError, error, refetch } = useScans(
+    {},
+    {
+      refetchInterval: (data) => {
+        const hasActive = data?.items.some(
+          (s) => s.status === "Pending" || s.status === "Running"
+        );
+        return hasActive ? 3_000 : false;
+      },
+    }
+  );
   const { data: snapshotsData } = useSnapshots();
   const retryScan = useRetryScan();
   const startScan = useStartScan();

@@ -1,6 +1,24 @@
 import { db, json, qs, withWorkspace } from "@/lib/api";
 import { runScan, triggerScanInBackground } from "@/lib/scan-worker";
 
+/** Auto-recover scans stuck in Pending/Running for more than 5 minutes. */
+async function recoverStuckScans(workspaceId: string) {
+  const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000);
+  await db.scanJob.updateMany({
+    where: {
+      workspaceId,
+      status: { in: ["Pending", "Running"] },
+      startedAt: { lt: fiveMinAgo },
+    },
+    data: {
+      status: "Failed",
+      error: "Scan timed out (serverless function was likely killed before completion).",
+      finishedAt: new Date(),
+      durationMs: 5 * 60 * 1000,
+    },
+  });
+}
+
 /**
  * GET /api/scans
  * Query params:
@@ -9,6 +27,8 @@ import { runScan, triggerScanInBackground } from "@/lib/scan-worker";
  *   limit  — default 50
  */
 export const GET = withWorkspace(async (req, ctx) => {
+  await recoverStuckScans(ctx.workspaceId);
+
   const url = new URL(req.url);
   const status = qs(url.searchParams.get("status"), "All");
   const scope = qs(url.searchParams.get("scope"), "All");

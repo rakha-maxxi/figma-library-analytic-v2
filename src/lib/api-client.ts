@@ -272,14 +272,19 @@ export function useFile(id: string | null) {
   });
 }
 
-export function useScans(params: Record<string, string> = {}, options: { refetchInterval?: number | false } = {}) {
+export function useScans(
+  params: Record<string, string> = {},
+  options: {
+    refetchInterval?: number | false | ((data: { total: number; items: ScanItem[] } | undefined) => number | false);
+  } = {}
+) {
   const search = new URLSearchParams(
     Object.fromEntries(Object.entries(params).filter(([, v]) => v && v !== "All"))
   ).toString();
   return useQuery({
     queryKey: qk.scans(params),
     queryFn: () => get<{ total: number; items: ScanItem[] }>(`/api/scans${search ? `?${search}` : ""}`),
-    refetchInterval: options.refetchInterval,
+    refetchInterval: options.refetchInterval as any,
   });
 }
 
@@ -462,7 +467,15 @@ function recomputeUnread(workspaceId: string) {
 export function useScanNotifications(workspaceId: string | null) {
   const scansQuery = useScans(
     {},
-    { refetchInterval: workspaceId ? 3_000 : false }
+    {
+      refetchInterval: (data) => {
+        if (!workspaceId) return false;
+        const hasActive = data?.items.some(
+          (s) => s.status === "Pending" || s.status === "Running"
+        );
+        return hasActive ? 3_000 : false;
+      },
+    }
   );
   const [state, setState] = React.useState<NotifState>(notifState);
 
@@ -592,7 +605,6 @@ export function useStartScan() {
       send<{ id: string; scope: string; status: string; startedAt: string; label: string }>("/api/scans", "POST", body),
     onSuccess: () => {
       invalidate();
-      [1500, 4000, 10000, 20000].forEach((delay) => setTimeout(invalidate, delay));
     },
   });
 }
