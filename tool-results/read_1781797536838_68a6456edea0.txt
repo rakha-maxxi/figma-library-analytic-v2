@@ -1,0 +1,1567 @@
+     1→# Product Requirements Document (PRD)
+     2→
+     3→# Design System Component Usage Tracker
+     4→
+     5→## 1. Overview
+     6→
+     7→### 1.1 Product Name
+     8→
+     9→**Design System Component Usage Tracker**
+    10→
+    11→Nama alternatif:
+    12→
+    13→- Component Usage Tracker
+    14→- Design System Analytics Tracker
+    15→- UI Kit Usage Tracker
+    16→- Component Adoption Tracker
+    17→
+    18→---
+    19→
+    20→### 1.2 Background
+    21→
+    22→Design System Designer / Design Ops bertanggung jawab menyediakan UI Kit, component library, dan design system asset agar tim Product Designer dapat membuat desain UI/UX lebih cepat, konsisten, dan scalable.
+    23→
+    24→Namun, setelah component dibuat dan digunakan oleh tim product designer, sering muncul gap visibility:
+    25→
+    26→- Design Ops tidak tahu component tertentu dipakai di file mana saja.
+    27→- Sulit mengetahui apakah component library benar-benar diadopsi oleh tim.
+    28→- Sulit mengetahui component mana yang aktif, jarang digunakan, atau tidak pernah digunakan.
+    29→- Sulit melihat perubahan usage component dari waktu ke waktu.
+    30→- Sulit membuat keputusan cleanup, improvement, atau deprecation berdasarkan data.
+    31→- Untuk beberapa Figma plan, fitur analytics bawaan seperti Figma Library Analytics tidak tersedia.
+    32→
+    33→Produk ini dibuat sebagai dashboard internal untuk membantu Design Ops melacak penggunaan component dari satu atau lebih UI Kit/design system source file terhadap file-file Figma product/design yang sudah didaftarkan.
+    34→
+    35→---
+    36→
+    37→### 1.3 Problem Statement
+    38→
+    39→Sebagai Design Ops, user membutuhkan cara cepat dan jelas untuk menjawab pertanyaan:
+    40→
+    41→> “Component dari design system ini dipakai di file mana saja, seberapa banyak, dan bagaimana perubahannya dari waktu ke waktu?”
+    42→
+    43→Tanpa tool ini, Design Ops harus membuka file product satu per satu untuk mengecek penggunaan component. Proses ini memakan waktu, rawan tidak akurat, sulit diulang, dan sulit diskalakan ketika jumlah file product semakin banyak.
+    44→
+    45→---
+    46→
+    47→### 1.4 Product Goal
+    48→
+    49→Membuat dashboard internal untuk melacak, menganalisis, dan memonitor penggunaan component dari design system / UI Kit source file pada file-file Figma yang terdaftar.
+    50→
+    51→Produk ini akan membantu user melihat:
+    52→
+    53→- daftar component dari source UI Kit
+    54→- total usage setiap component
+    55→- file mana saja yang menggunakan component tertentu
+    56→- jumlah instance component per file
+    57→- status component: active, low usage, unused
+    58→- usage change dari scan sebelumnya
+    59→- file-level design system adoption
+    60→- scan history
+    61→- basic governance insights
+    62→
+    63→---
+    64→
+    65→### 1.5 Product Objectives / OKR
+    66→
+    67→#### Objective 1: Meningkatkan visibility penggunaan design system component
+    68→
+    69→Key Results:
+    70→
+    71→- User dapat melihat daftar component dari source UI Kit.
+    72→- User dapat melihat total usage setiap component.
+    73→- User dapat melihat file mana saja yang menggunakan component tertentu.
+    74→- User dapat melihat last scanned timestamp untuk memahami freshness data.
+    75→
+    76→#### Objective 2: Mengurangi effort manual dalam audit component usage
+    77→
+    78→Key Results:
+    79→
+    80→- User tidak perlu membuka file product satu per satu untuk mengecek usage.
+    81→- User dapat menjalankan scan pada registered files dari satu dashboard.
+    82→- User dapat melihat hasil usage dalam bentuk table, detail page, dan summary.
+    83→
+    84→#### Objective 3: Membantu design system governance berbasis data
+    85→
+    86→Key Results:
+    87→
+    88→- User dapat mengidentifikasi unused components.
+    89→- User dapat mengidentifikasi low usage components.
+    90→- User dapat melihat component usage increase/decrease antar scan.
+    91→- User dapat menggunakan data usage sebagai dasar cleanup, deprecation, atau improvement component.
+    92→
+    93→#### Objective 4: Menyediakan alternatif scoped analytics untuk tim yang belum memiliki full library analytics bawaan
+    94→
+    95→Key Results:
+    96→
+    97→- User dapat membuat analytics berbasis registered files.
+    98→- User dapat melihat component usage berdasarkan scan history.
+    99→- User dapat memahami scope dan limitation data secara jelas.
+   100→
+   101→---
+   102→
+   103→### 1.6 Target User / Persona
+   104→
+   105→#### Primary Persona: Design Ops / Design System Designer
+   106→
+   107→**Role:**
+   108→Design Ops, Design System Designer, UI Kit Maintainer, Design System Owner
+   109→
+   110→**Responsibilities:**
+   111→
+   112→- Membuat dan maintain UI Kit / design system.
+   113→- Menyediakan component untuk product designers.
+   114→- Memastikan konsistensi penggunaan design system.
+   115→- Mengidentifikasi component yang perlu diperbaiki, digabung, atau dideprecate.
+   116→- Membantu meningkatkan adoption design system.
+   117→
+   118→**Pain Points:**
+   119→
+   120→- Tidak tahu component dipakai di file mana.
+   121→- Harus mengecek file product secara manual.
+   122→- Sulit membuat keputusan component lifecycle berdasarkan data.
+   123→- Sulit tahu component mana yang tidak digunakan.
+   124→- Sulit melihat adoption design system per file.
+   125→
+   126→**Needs:**
+   127→
+   128→- Component usage dashboard
+   129→- Search component
+   130→- File usage visibility
+   131→- Scan history
+   132→- Usage change detection
+   133→- Basic governance insights
+   134→
+   135→---
+   136→
+   137→#### Secondary Persona: Product Designer
+   138→
+   139→**Role:**
+   140→Product Designer, UI/UX Designer
+   141→
+   142→**Responsibilities:**
+   143→
+   144→- Menggunakan design system dalam desain product.
+   145→- Membuat eksplorasi UI/UX dengan cepat.
+   146→- Menjaga konsistensi desain.
+   147→
+   148→**Needs:**
+   149→
+   150→- Mengetahui apakah file mereka sudah masuk tracking.
+   151→- Membantu Design Ops menjaga kualitas penggunaan component.
+   152→- Mendapat visibility apakah file mereka menggunakan design system dengan baik.
+   153→
+   154→---
+   155→
+   156→#### Secondary Persona: Design Lead / Design Manager
+   157→
+   158→**Role:**
+   159→Design Lead, Head of Design, Product Design Manager
+   160→
+   161→**Responsibilities:**
+   162→
+   163→- Melihat adoption design system di tim.
+   164→- Membantu prioritas improvement design system.
+   165→- Menilai konsistensi UI/UX antar product area.
+   166→
+   167→**Needs:**
+   168→
+   169→- Overview adoption
+   170→- Usage summary
+   171→- File-level health
+   172→- Insight untuk roadmap design system
+   173→
+   174→---
+   175→
+   176→## 2. Scope
+   177→
+   178→### 2.1 In-Scope
+   179→
+   180→#### Source UI Kit / Design System File Management
+   181→
+   182→- User dapat mendaftarkan satu source UI Kit/design system file.
+   183→- User dapat melihat daftar component dari source file.
+   184→- User dapat mengganti source file jika diperlukan.
+   185→- User dapat refresh component inventory.
+   186→
+   187→#### Registered Consumer Files
+   188→
+   189→- User dapat mendaftarkan file-file Figma yang ingin dilacak.
+   190→- User dapat melihat daftar registered files.
+   191→- User dapat menghapus atau disable file dari tracking.
+   192→- User dapat melihat status scan setiap file.
+   193→
+   194→#### Component Usage Tracking
+   195→
+   196→- Sistem dapat menampilkan total usage setiap component.
+   197→- Sistem dapat menampilkan jumlah file yang menggunakan component.
+   198→- Sistem dapat menampilkan component status:
+   199→  - Active
+   200→  - Low Usage
+   201→  - Unused
+   202→  - Not Scanned
+   203→
+   204→- User dapat mencari, memfilter, dan mengurutkan component.
+   205→
+   206→#### Component Detail
+   207→
+   208→- User dapat membuka detail component.
+   209→- User dapat melihat file mana saja yang menggunakan component tersebut.
+   210→- User dapat melihat jumlah instance component per file.
+   211→- User dapat melihat lokasi instance seperti page/frame jika tersedia.
+   212→- User dapat membuka file atau node terkait di Figma jika memungkinkan.
+   213→
+   214→#### File-Level Usage
+   215→
+   216→- User dapat melihat ringkasan usage per registered file.
+   217→- User dapat melihat total design system instances dalam file.
+   218→- User dapat melihat unique components yang digunakan dalam file.
+   219→- User dapat membuka detail file untuk melihat component apa saja yang dipakai.
+   220→
+   221→#### Scan Management
+   222→
+   223→- User dapat menjalankan scan terhadap semua registered files.
+   224→- User dapat menjalankan rescan pada satu file tertentu.
+   225→- User dapat melihat status scan:
+   226→  - Pending
+   227→  - Running
+   228→  - Success
+   229→  - Failed
+   230→  - Paused
+   231→
+   232→- User dapat melihat scan history.
+   233→- User dapat retry failed scan.
+   234→
+   235→#### Snapshot & Change Detection
+   236→
+   237→- Sistem menyimpan hasil scan sebagai snapshot.
+   238→- Sistem dapat membandingkan hasil scan terbaru dengan scan sebelumnya.
+   239→- Sistem dapat menampilkan perubahan usage:
+   240→  - Newly Used
+   241→  - Increased
+   242→  - Decreased
+   243→  - Removed
+   244→
+   245→- Sistem dapat menampilkan recent changes.
+   246→
+   247→#### Insights
+   248→
+   249→- Sistem dapat menampilkan unused components.
+   250→- Sistem dapat menampilkan low usage components.
+   251→- Sistem dapat menampilkan most used components.
+   252→- Sistem dapat menampilkan stale files.
+   253→- Sistem dapat menampilkan failed scans.
+   254→
+   255→#### UI & Experience
+   256→
+   257→- UI mengambil inspirasi dari Figma Library Analytics untuk domain analytics.
+   258→- UX mengambil inspirasi dari Linear untuk interaction, clarity, density, dan speed.
+   259→- UI dapat dibangun menggunakan shadcn/ui sebagai design library.
+   260→- Dashboard harus clean, compact, dan data-first.
+   261→
+   262→---
+   263→
+   264→### 2.2 Out-of-Scope
+   265→
+   266→Fitur yang tidak masuk scope awal:
+   267→
+   268→- Auto-discovery seluruh file dalam company/workspace tanpa registration.
+   269→- Full replacement 1:1 dari Figma Library Analytics.
+   270→- Real-time tracking saat designer mengedit file.
+   271→- Deteksi exact timestamp saat component ditambah/dihapus.
+   272→- Analisis usage pada file yang tidak punya akses permission.
+   273→- Automatic deprecation action ke Figma.
+   274→- Mengubah atau memodifikasi file Figma.
+   275→- Membuat component baru di Figma.
+   276→- AI agent untuk crawling.
+   277→- AI recommendation untuk component improvement.
+   278→- Multi-organization enterprise governance.
+   279→- Advanced design linting.
+   280→- Visual diff desain.
+   281→- Full detached component analysis.
+   282→- Integrasi Slack/Jira/Linear pada MVP.
+   283→- Role-based access control kompleks pada MVP.
+   284→- Multi-source UI Kit support pada MVP, kecuali diputuskan sebagai requirement utama.
+   285→
+   286→---
+   287→
+   288→### 2.3 Product Boundary
+   289→
+   290→Produk ini bukan analytics global Figma organization. Produk ini adalah tracker berbasis file yang sudah terdaftar.
+   291→
+   292→Kalimat positioning yang tepat:
+   293→
+   294→> Track design system component usage across registered Figma files based on scan history.
+   295→
+   296→Bukan:
+   297→
+   298→> Automatically track component usage across all company Figma files.
+   299→
+   300→Produk ini harus selalu jelas menyampaikan bahwa:
+   301→
+   302→- data hanya berasal dari registered files
+   303→- data berdasarkan latest successful scan
+   304→- data bukan real-time
+   305→- file yang tidak terdaftar tidak termasuk analytics
+   306→
+   307→---
+   308→
+   309→### 2.4 Timeline & Milestone
+   310→
+   311→#### Milestone 1 — MVP Foundation
+   312→
+   313→Goal: user dapat mendaftarkan source UI Kit dan consumer files, lalu melihat component usage.
+   314→
+   315→Deliverables:
+   316→
+   317→- Setup dashboard
+   318→- Add source UI Kit file
+   319→- Import component inventory
+   320→- Add registered files
+   321→- Manual scan
+   322→- Component usage list
+   323→- Component detail by file
+   324→- File usage list
+   325→- Basic scan history
+   326→
+   327→---
+   328→
+   329→#### Milestone 2 — Snapshot & Change Detection
+   330→
+   331→Goal: user dapat melihat perubahan usage antar scan.
+   332→
+   333→Deliverables:
+   334→
+   335→- Save scan snapshot
+   336→- Compare current scan vs previous scan
+   337→- Detect increased/decreased/removed/newly used
+   338→- Recent changes page
+   339→- Basic component trend
+   340→
+   341→---
+   342→
+   343→#### Milestone 3 — Insights & Governance
+   344→
+   345→Goal: user dapat menggunakan data untuk keputusan design system.
+   346→
+   347→Deliverables:
+   348→
+   349→- Unused components
+   350→- Low usage components
+   351→- Most used components
+   352→- Stale files
+   353→- Failed scans
+   354→- Usage status thresholds
+   355→
+   356→---
+   357→
+   358→#### Milestone 4 — Experience Polish
+   359→
+   360→Goal: dashboard terasa cepat, rapi, dan nyaman dipakai seperti internal tool modern.
+   361→
+   362→Deliverables:
+   363→
+   364→- Improved table filtering
+   365→- Search experience
+   366→- Detail drawer
+   367→- Empty states
+   368→- Error states
+   369→- Loading states
+   370→- Scan progress feedback
+   371→- Optional command menu
+   372→- Optional dark mode
+   373→
+   374→---
+   375→
+   376→#### Milestone 5 — Optional Enhancements
+   377→
+   378→Goal: memperkuat workflow Design Ops.
+   379→
+   380→Potential deliverables:
+   381→
+   382→- Scheduled scan
+   383→- Export CSV
+   384→- Weekly summary
+   385→- Plugin helper for registering current file
+   386→- Slack notification
+   387→- Multi-source UI Kit support
+   388→- AI insight summary
+   389→
+   390→---
+   391→
+   392→## 3. User Stories / Use Cases
+   393→
+   394→### 3.1 Register Source UI Kit
+   395→
+   396→As a Design Ops, I want to register a source UI Kit file so that the system can identify the components that should be tracked.
+   397→
+   398→#### Happy Path
+   399→
+   400→1. User opens onboarding or settings.
+   401→2. User pastes source UI Kit Figma file link.
+   402→3. System validates the link.
+   403→4. System displays source file name.
+   404→5. System imports component list.
+   405→6. User sees confirmation that source UI Kit is connected.
+   406→
+   407→#### Edge Cases
+   408→
+   409→- File link is invalid.
+   410→- File cannot be accessed.
+   411→- File does not contain components.
+   412→- User registers the wrong file.
+   413→- Source UI Kit was previously registered.
+   414→
+   415→---
+   416→
+   417→### 3.2 Register Consumer Files
+   418→
+   419→As a Design Ops, I want to register product/design files so that the system can scan them for design system component usage.
+   420→
+   421→#### Happy Path
+   422→
+   423→1. User opens Files page.
+   424→2. User clicks “Add files”.
+   425→3. User pastes one or multiple Figma file links.
+   426→4. System validates each file.
+   427→5. System adds valid files to the registered files list.
+   428→6. User sees file name, status, and scan state.
+   429→
+   430→#### Edge Cases
+   431→
+   432→- One or more links are invalid.
+   433→- File already exists in registered list.
+   434→- File cannot be accessed.
+   435→- User adds unsupported file type.
+   436→- User pastes mixed valid and invalid links.
+   437→
+   438→---
+   439→
+   440→### 3.3 Scan Registered Files
+   441→
+   442→As a Design Ops, I want to scan registered files so that I can see which source components are used in those files.
+   443→
+   444→#### Happy Path
+   445→
+   446→1. User clicks “Scan all”.
+   447→2. System creates scan job.
+   448→3. System shows scan progress.
+   449→4. Each file moves through pending, running, and success state.
+   450→5. Usage result is saved.
+   451→6. Dashboard updates component and file usage summary.
+   452→
+   453→#### Edge Cases
+   454→
+   455→- One file fails but others succeed.
+   456→- Scan is paused due to rate limit.
+   457→- User closes dashboard during scan.
+   458→- File was deleted or moved.
+   459→- User no longer has access to a file.
+   460→- Scan returns zero usage for a file.
+   461→
+   462→---
+   463→
+   464→### 3.4 View Component Usage List
+   465→
+   466→As a Design Ops, I want to see all source components and their usage count so that I can identify active, low usage, and unused components.
+   467→
+   468→#### Happy Path
+   469→
+   470→1. User opens Components page.
+   471→2. User sees component table.
+   472→3. Table shows component name, total instances, files used, status, and last seen.
+   473→4. User sorts by total instances.
+   474→5. User filters by status.
+   475→6. User searches a component name.
+   476→
+   477→#### Edge Cases
+   478→
+   479→- No scan has been run yet.
+   480→- Component list is empty.
+   481→- Usage data is outdated.
+   482→- Search returns no result.
+   483→- Some components have duplicate or similar names.
+   484→
+   485→---
+   486→
+   487→### 3.5 View Component Detail
+   488→
+   489→As a Design Ops, I want to open a component detail page so that I can see where that component is being used.
+   490→
+   491→#### Happy Path
+   492→
+   493→1. User clicks Component A.
+   494→2. System opens component detail page or drawer.
+   495→3. User sees total instances and files used.
+   496→4. User sees list of files using Component A.
+   497→5. User sees instance count per file.
+   498→6. User can open related Figma file or node.
+   499→
+   500→#### Edge Cases
+   501→
+   502→- Component has zero usage.
+   503→- Component was deleted or renamed in source UI Kit.
+   504→- Component exists but has no scan history.
+   505→- Some file data is stale.
+   506→- Some instance links cannot be generated.
+   507→
+   508→---
+   509→
+   510→### 3.6 View File Usage Summary
+   511→
+   512→As a Design Ops, I want to see usage summary per file so that I can evaluate design system adoption by file.
+   513→
+   514→#### Happy Path
+   515→
+   516→1. User opens Files page.
+   517→2. User sees all registered files.
+   518→3. Each file shows total design system instances, unique components used, status, and last scanned.
+   519→4. User opens a file detail.
+   520→5. User sees which source components are used in that file.
+   521→
+   522→#### Edge Cases
+   523→
+   524→- File has never been scanned.
+   525→- File scan failed.
+   526→- File has zero design system component usage.
+   527→- File has stale scan data.
+   528→- File is no longer accessible.
+   529→
+   530→---
+   531→
+   532→### 3.7 Detect Usage Changes
+   533→
+   534→As a Design Ops, I want to see changes between scans so that I can understand whether component usage is increasing, decreasing, newly added, or removed.
+   535→
+   536→#### Happy Path
+   537→
+   538→1. User runs a second scan after previous scan exists.
+   539→2. System compares latest scan with previous scan.
+   540→3. System detects changes.
+   541→4. User opens Recent Changes.
+   542→5. User sees component, file, previous count, current count, and change type.
+   543→
+   544→#### Edge Cases
+   545→
+   546→- There is no previous scan.
+   547→- A file was skipped.
+   548→- Component was renamed.
+   549→- Component was removed from source UI Kit.
+   550→- File failed during latest scan.
+   551→- Usage count changes because instances were detached or deleted.
+   552→
+   553→---
+   554→
+   555→### 3.8 Identify Unused Components
+   556→
+   557→As a Design Ops, I want to see unused components so that I can review candidates for cleanup or deprecation.
+   558→
+   559→#### Happy Path
+   560→
+   561→1. User opens Insights page.
+   562→2. User selects “Unused components”.
+   563→3. System shows components with zero usage across registered files.
+   564→4. User reviews component list.
+   565→5. User decides whether component needs follow-up.
+   566→
+   567→#### Edge Cases
+   568→
+   569→- Component is intentionally unused but still needed.
+   570→- Component is new and not adopted yet.
+   571→- Registered file coverage is incomplete.
+   572→- Usage exists in unregistered files but not visible to the system.
+   573→
+   574→---
+   575→
+   576→## 4. Functional Requirements
+   577→
+   578→### 4.1 Onboarding
+   579→
+   580→The product must provide an onboarding flow for first-time setup.
+   581→
+   582→Expected behavior:
+   583→
+   584→- User is guided to connect Figma access.
+   585→- User is guided to register source UI Kit.
+   586→- User is guided to register consumer files.
+   587→- User is informed that analytics are based only on registered files.
+   588→- User is informed that scan result is snapshot-based, not real-time.
+   589→
+   590→---
+   591→
+   592→### 4.2 Source UI Kit Registration
+   593→
+   594→The product must allow user to register a source UI Kit file.
+   595→
+   596→Expected behavior:
+   597→
+   598→- User can paste a Figma file link.
+   599→- System validates the link format.
+   600→- System identifies the file as source UI Kit.
+   601→- System displays file name after successful registration.
+   602→- System can refresh component list from source UI Kit.
+   603→- User can replace the registered source UI Kit file if needed.
+   604→
+   605→---
+   606→
+   607→### 4.3 Component Inventory
+   608→
+   609→The product must display component inventory from source UI Kit.
+   610→
+   611→Expected behavior:
+   612→
+   613→- Components are listed in a table.
+   614→- Component name is visible.
+   615→- Component set or grouping is visible if available.
+   616→- Component status is visible.
+   617→- Component usage summary is visible after scan.
+   618→- User can search components.
+   619→- User can sort components by usage.
+   620→- User can filter components by status.
+   621→
+   622→Recommended statuses:
+   623→
+   624→- Active
+   625→- Low Usage
+   626→- Unused
+   627→- Not Scanned
+   628→- Deprecated Candidate
+   629→
+   630→---
+   631→
+   632→### 4.4 Registered Files Management
+   633→
+   634→The product must allow user to manage tracked files.
+   635→
+   636→Expected behavior:
+   637→
+   638→- User can add one or multiple Figma file links.
+   639→- User can remove files from tracking.
+   640→- User can disable files from future scans.
+   641→- User can see file name, scan status, and last scanned date.
+   642→- User can manually rescan a single file.
+   643→- User can open a file in Figma.
+   644→
+   645→Recommended file statuses:
+   646→
+   647→- Not Scanned
+   648→- Healthy
+   649→- Low Adoption
+   650→- Zero Usage
+   651→- Failed
+   652→- Stale
+   653→- Disabled
+   654→
+   655→---
+   656→
+   657→### 4.5 Scan Management
+   658→
+   659→The product must allow user to start and monitor scans.
+   660→
+   661→Expected behavior:
+   662→
+   663→- User can trigger scan all.
+   664→- User can trigger scan per file.
+   665→- System displays scan progress.
+   666→- System displays running, success, failed, and paused states.
+   667→- System stores each scan as history.
+   668→- System preserves previous scan history.
+   669→- System does not erase historical data when latest scan finishes.
+   670→- System preserves previous successful data if latest scan fails.
+   671→
+   672→---
+   673→
+   674→### 4.6 Component Usage Dashboard
+   675→
+   676→The product must show component usage across registered files.
+   677→
+   678→Expected behavior:
+   679→
+   680→- User can see total instances per component.
+   681→- User can see number of files using each component.
+   682→- User can see last seen timestamp.
+   683→- User can open component detail.
+   684→- User can identify unused components.
+   685→- User can identify low usage components.
+   686→- User can identify most used components.
+   687→
+   688→---
+   689→
+   690→### 4.7 Component Detail
+   691→
+   692→The product must show detailed usage for a selected component.
+   693→
+   694→Expected behavior:
+   695→
+   696→- Component detail shows total instances.
+   697→- Component detail shows total files used.
+   698→- Component detail shows usage by file.
+   699→- Component detail shows instance list if available.
+   700→- Component detail shows last scanned timestamp.
+   701→- Component detail provides Figma links where possible.
+   702→- Component detail may be displayed as a page or drawer.
+   703→
+   704→Recommended tabs:
+   705→
+   706→- Overview
+   707→- Files
+   708→- Instances
+   709→- Trend
+   710→- Metadata
+   711→
+   712→---
+   713→
+   714→### 4.8 File-Level Usage
+   715→
+   716→The product must show usage summary per registered file.
+   717→
+   718→Expected behavior:
+   719→
+   720→- File list shows total design system component instances.
+   721→- File list shows unique design system components used.
+   722→- File list shows last scan status.
+   723→- File detail shows components used in that file.
+   724→- File detail allows user to open Figma file.
+   725→- File detail can indicate stale or failed scan state.
+   726→
+   727→---
+   728→
+   729→### 4.9 Snapshot History
+   730→
+   731→The product must save each scan result as a snapshot.
+   732→
+   733→Expected behavior:
+   734→
+   735→- Each scan has a timestamp.
+   736→- Each snapshot captures usage count per component per file.
+   737→- Previous snapshots remain accessible for comparison.
+   738→- Latest scan powers the current dashboard.
+   739→- Historical scan powers trend and change detection.
+   740→
+   741→---
+   742→
+   743→### 4.10 Change Detection
+   744→
+   745→The product must compare latest scan with previous scan.
+   746→
+   747→Expected behavior:
+   748→
+   749→- System detects newly used component in file.
+   750→- System detects removed component from file.
+   751→- System detects increased usage count.
+   752→- System detects decreased usage count.
+   753→- System displays recent changes.
+   754→- System clearly communicates that detected time is based on scan time, not exact edit time.
+   755→
+   756→Recommended change types:
+   757→
+   758→- Newly Used
+   759→- Increased
+   760→- Decreased
+   761→- Removed
+   762→- No Change
+   763→
+   764→---
+   765→
+   766→### 4.11 Insights
+   767→
+   768→The product must provide basic design system insights.
+   769→
+   770→Expected behavior:
+   771→
+   772→- Show unused components.
+   773→- Show low usage components.
+   774→- Show most used components.
+   775→- Show stale files.
+   776→- Show failed scans.
+   777→- Show recent usage changes.
+   778→- Show candidate components for review.
+   779→
+   780→---
+   781→
+   782→### 4.12 Search, Filter, and Sort
+   783→
+   784→The product must provide efficient navigation for data-heavy views.
+   785→
+   786→Expected behavior:
+   787→
+   788→- User can search by component name.
+   789→- User can search by file name.
+   790→- User can filter by status.
+   791→- User can sort by usage count.
+   792→- User can sort by files used.
+   793→- User can sort by last scanned or last seen.
+   794→- User can reset filters.
+   795→
+   796→---
+   797→
+   798→### 4.13 Empty, Loading, and Error States
+   799→
+   800→The product must provide clear states.
+   801→
+   802→Expected behavior:
+   803→
+   804→- Empty state explains what user should do next.
+   805→- Loading state shows progress or skeleton UI.
+   806→- Error state explains the issue in simple language.
+   807→- Rate limit state explains that scan is paused and will resume or can be retried.
+   808→- Permission error explains that the file may not be accessible.
+   809→- No usage state explains that component is not found in registered files.
+   810→
+   811→---
+   812→
+   813→## 5. Non-Functional Requirements
+   814→
+   815→### 5.1 Performance
+   816→
+   817→The product should feel fast and responsive for dashboard usage.
+   818→
+   819→Requirements:
+   820→
+   821→- Main dashboard should load quickly using latest saved scan data.
+   822→- Tables should support large numbers of components and files.
+   823→- Search and filtering should feel instant for common dataset size.
+   824→- Scan process should not block user from browsing existing data.
+   825→- User should be able to leave and return while scan continues if supported.
+   826→- Dashboard should show last available result even when scan is running.
+   827→
+   828→---
+   829→
+   830→### 5.2 Scalability
+   831→
+   832→The product should support gradual growth.
+   833→
+   834→Expected scale for MVP:
+   835→
+   836→- 1 source UI Kit file
+   837→- 10–100 registered Figma files
+   838→- hundreds to thousands of components
+   839→- thousands to tens of thousands of component instances
+   840→- multiple scan histories over time
+   841→
+   842→The product should be designed so future versions can support:
+   843→
+   844→- scheduled scans
+   845→- multiple source UI Kit files
+   846→- multiple teams
+   847→- larger scan history
+   848→- more advanced insights
+   849→
+   850→---
+   851→
+   852→### 5.3 Security
+   853→
+   854→The product must handle Figma access carefully.
+   855→
+   856→Requirements:
+   857→
+   858→- User access token or credential must not be exposed in frontend UI.
+   859→- Sensitive credentials must be stored securely.
+   860→- Error messages must not reveal secrets.
+   861→- User should be able to disconnect or replace Figma access.
+   862→- Only files accessible by the connected Figma account can be scanned.
+   863→- Product must not modify Figma files in MVP.
+   864→
+   865→---
+   866→
+   867→### 5.4 Reliability
+   868→
+   869→The product must handle scan failures gracefully.
+   870→
+   871→Requirements:
+   872→
+   873→- Failed scan should not corrupt previous data.
+   874→- Partial scan success should still save successful file results.
+   875→- User should be able to retry failed scans.
+   876→- Latest successful data should remain visible even if new scan fails.
+   877→- System should show clear status for failed, stale, or skipped files.
+   878→
+   879→---
+   880→
+   881→### 5.5 Data Freshness
+   882→
+   883→The product must clearly communicate freshness of data.
+   884→
+   885→Requirements:
+   886→
+   887→- Every dashboard view should show last scanned timestamp.
+   888→- File-level data should show last scanned timestamp per file.
+   889→- Trend and change detection should be based on scan history.
+   890→- Product should avoid implying real-time accuracy.
+   891→- Labels should use “Latest scan result” or “As of last scan” where appropriate.
+   892→
+   893→---
+   894→
+   895→### 5.6 Browser & Device Support
+   896→
+   897→Primary support:
+   898→
+   899→- Desktop browser
+   900→- Chrome
+   901→- Edge
+   902→- Safari
+   903→- Firefox
+   904→
+   905→Secondary support:
+   906→
+   907→- Tablet view for read-only dashboard usage
+   908→
+   909→Not required for MVP:
+   910→
+   911→- Mobile-first experience
+   912→- Native mobile app
+   913→
+   914→---
+   915→
+   916→### 5.7 Accessibility
+   917→
+   918→The UI should follow basic accessibility expectations.
+   919→
+   920→Requirements:
+   921→
+   922→- Sufficient color contrast.
+   923→- Keyboard navigable core interactions.
+   924→- Clear focus state.
+   925→- Status should not rely only on color.
+   926→- Tables should remain readable.
+   927→- Interactive controls should have clear labels.
+   928→
+   929→---
+   930→
+   931→### 5.8 Maintainability
+   932→
+   933→The product should be easy to extend.
+   934→
+   935→Requirements:
+   936→
+   937→- Feature areas should be modular.
+   938→- UI components should be reusable.
+   939→- Dashboard tables should follow consistent patterns.
+   940→- Status naming should be consistent.
+   941→- Future SRS/SPEC should define technical implementation separately.
+   942→
+   943→---
+   944→
+   945→## 6. Design & UX
+   946→
+   947→### 6.1 Design Direction
+   948→
+   949→The product UI should feel like a mix of:
+   950→
+   951→- **Figma Library Analytics** for analytics model and domain context.
+   952→- **Linear** for interaction, speed, density, and visual clarity.
+   953→- **shadcn/ui** for component library implementation.
+   954→
+   955→Design keywords:
+   956→
+   957→- clean
+   958→- compact
+   959→- calm
+   960→- data-first
+   961→- fast
+   962→- operational
+   963→- precise
+   964→- modern internal tool
+   965→
+   966→The UI should avoid:
+   967→
+   968→- overly colorful generic SaaS dashboard style
+   969→- decorative charts without clear value
+   970→- landing page-style visuals
+   971→- excessive cards
+   972→- unclear status labels
+   973→
+   974→---
+   975→
+   976→### 6.2 Visual Style
+   977→
+   978→Recommended visual direction:
+   979→
+   980→- Neutral background
+   981→- Subtle borders
+   982→- Minimal shadows
+   983→- Compact typography
+   984→- Dense but readable tables
+   985→- Small status badges
+   986→- Clear empty states
+   987→- Calm accent color
+   988→- Light mode first
+   989→- Optional dark mode later
+   990→
+   991→---
+   992→
+   993→### 6.3 Information Architecture
+   994→
+   995→Recommended navigation:
+   996→
+   997→```txt
+   998→Overview
+   999→Components
+  1000→Files
+  1001→Scans
+  1002→Insights
+  1003→Settings
+  1004→```
+  1005→
+  1006→#### Overview
+  1007→
+  1008→Purpose: high-level summary.
+  1009→
+  1010→Content:
+  1011→
+  1012→- total components
+  1013→- registered files
+  1014→- total instances
+  1015→- unused components
+  1016→- failed scans
+  1017→- last scan
+  1018→- recent changes summary
+  1019→
+  1020→#### Components
+  1021→
+  1022→Purpose: main component usage analytics.
+  1023→
+  1024→Content:
+  1025→
+  1026→- component table
+  1027→- search
+  1028→- filter by status
+  1029→- sort by usage
+  1030→- component detail drawer/page
+  1031→
+  1032→#### Files
+  1033→
+  1034→Purpose: file-level adoption and scan coverage.
+  1035→
+  1036→Content:
+  1037→
+  1038→- registered file list
+  1039→- file status
+  1040→- total design system instances
+  1041→- unique components used
+  1042→- last scanned
+  1043→- file detail
+  1044→
+  1045→#### Scans
+  1046→
+  1047→Purpose: scan job monitoring.
+  1048→
+  1049→Content:
+  1050→
+  1051→- scan history
+  1052→- status
+  1053→- duration
+  1054→- target file
+  1055→- error message
+  1056→- retry action
+  1057→
+  1058→#### Insights
+  1059→
+  1060→Purpose: design system governance.
+  1061→
+  1062→Content:
+  1063→
+  1064→- unused components
+  1065→- low usage components
+  1066→- most used components
+  1067→- stale files
+  1068→- recent changes
+  1069→
+  1070→#### Settings
+  1071→
+  1072→Purpose: configuration.
+  1073→
+  1074→Content:
+  1075→
+  1076→- Figma access status
+  1077→- source UI Kit file
+  1078→- registered file management
+  1079→- usage status threshold
+  1080→- scan configuration
+  1081→
+  1082→---
+  1083→
+  1084→### 6.4 Core User Flow
+  1085→
+  1086→#### First-Time Setup Flow
+  1087→
+  1088→```txt
+  1089→Open app
+  1090→→ Connect Figma access
+  1091→→ Register source UI Kit
+  1092→→ Import component list
+  1093→→ Register product files
+  1094→→ Run first scan
+  1095→→ View dashboard
+  1096→```
+  1097→
+  1098→#### Component Investigation Flow
+  1099→
+  1100→```txt
+  1101→Open Components page
+  1102→→ Search Component A
+  1103→→ Open component detail
+  1104→→ See total instances
+  1105→→ See files using Component A
+  1106→→ Open related Figma file/node
+  1107→```
+  1108→
+  1109→#### File Adoption Flow
+  1110→
+  1111→```txt
+  1112→Open Files page
+  1113→→ Select File Beta
+  1114→→ View source components used
+  1115→→ See total usage
+  1116→→ Check stale/failed status
+  1117→→ Rescan file if needed
+  1118→```
+  1119→
+  1120→#### Change Detection Flow
+  1121→
+  1122→```txt
+  1123→Run new scan
+  1124→→ System compares with previous scan
+  1125→→ Open Recent Changes
+  1126→→ See newly used / removed / increased / decreased usage
+  1127→→ Investigate component or file detail
+  1128→```
+  1129→
+  1130→---
+  1131→
+  1132→### 6.5 Key Screens
+  1133→
+  1134→#### Screen 1 — Overview Dashboard
+  1135→
+  1136→Main purpose:
+  1137→
+  1138→- give quick visibility of system health and usage state
+  1139→
+  1140→Key UI elements:
+  1141→
+  1142→- metric cards
+  1143→- recent changes list
+  1144→- scan status card
+  1145→- top used components
+  1146→- unused component count
+  1147→- stale file warning
+  1148→
+  1149→---
+  1150→
+  1151→#### Screen 2 — Components Table
+  1152→
+  1153→Main purpose:
+  1154→
+  1155→- browse and search source components
+  1156→
+  1157→Key columns:
+  1158→
+  1159→- component name
+  1160→- component set
+  1161→- total instances
+  1162→- files used
+  1163→- status
+  1164→- last seen
+  1165→- action
+  1166→
+  1167→---
+  1168→
+  1169→#### Screen 3 — Component Detail
+  1170→
+  1171→Main purpose:
+  1172→
+  1173→- inspect where a component is used
+  1174→
+  1175→Key sections:
+  1176→
+  1177→- component summary
+  1178→- file usage table
+  1179→- instance list
+  1180→- trend tab
+  1181→- metadata
+  1182→- open in Figma action
+  1183→
+  1184→---
+  1185→
+  1186→#### Screen 4 — Files Table
+  1187→
+  1188→Main purpose:
+  1189→
+  1190→- understand tracking coverage and file-level adoption
+  1191→
+  1192→Key columns:
+  1193→
+  1194→- file name
+  1195→- total design system instances
+  1196→- unique components used
+  1197→- last scanned
+  1198→- scan status
+  1199→- action
+  1200→
+  1201→---
+  1202→
+  1203→#### Screen 5 — Scan Jobs
+  1204→
+  1205→Main purpose:
+  1206→
+  1207→- monitor crawler activity and failures
+  1208→
+  1209→Key columns:
+  1210→
+  1211→- target file
+  1212→- status
+  1213→- started at
+  1214→- finished at
+  1215→- duration
+  1216→- result
+  1217→- error message
+  1218→- retry action
+  1219→
+  1220→---
+  1221→
+  1222→#### Screen 6 — Insights
+  1223→
+  1224→Main purpose:
+  1225→
+  1226→- identify component governance opportunities
+  1227→
+  1228→Key sections:
+  1229→
+  1230→- unused components
+  1231→- low usage components
+  1232→- most used components
+  1233→- removed from files
+  1234→- stale files
+  1235→- failed scans
+  1236→
+  1237→---
+  1238→
+  1239→### 6.6 UX Principles
+  1240→
+  1241→#### Principle 1: Be honest about data scope
+  1242→
+  1243→The app must clearly say that analytics are based on registered files only.
+  1244→
+  1245→Recommended copy:
+  1246→
+  1247→> Usage is calculated from registered Figma files that have been scanned.
+  1248→
+  1249→#### Principle 2: Be honest about freshness
+  1250→
+  1251→The app must show when data was last scanned.
+  1252→
+  1253→Recommended copy:
+  1254→
+  1255→> Latest scan result from 3 Jun 2026, 10:00.
+  1256→
+  1257→#### Principle 3: Make investigation fast
+  1258→
+  1259→User should be able to go from component to affected files quickly.
+  1260→
+  1261→Desired flow:
+  1262→
+  1263→```txt
+  1264→Search component
+  1265→→ click row
+  1266→→ see files
+  1267→→ open in Figma
+  1268→```
+  1269→
+  1270→#### Principle 4: Prioritize tables over decorative charts
+  1271→
+  1272→Charts are useful for trends, but the MVP should focus on searchable tables and clear counts.
+  1273→
+  1274→#### Principle 5: Handle failure clearly
+  1275→
+  1276→If scan fails, user should know:
+  1277→
+  1278→- which file failed
+  1279→- why it failed
+  1280→- what can be done next
+  1281→
+  1282→---
+  1283→
+  1284→## 7. Dependencies & Assumptions
+  1285→
+  1286→### 7.1 Dependencies
+  1287→
+  1288→The product depends on:
+  1289→
+  1290→#### Figma Access
+  1291→
+  1292→- User must have access to source UI Kit file.
+  1293→- User must have access to registered product files.
+  1294→- If access is removed, scan may fail.
+  1295→
+  1296→#### Figma File Structure
+  1297→
+  1298→- Component usage can only be detected if component instances remain linked to the source component.
+  1299→- Detached components may not be counted as active instances of source UI Kit component.
+  1300→- Deleted files or inaccessible files cannot be scanned.
+  1301→
+  1302→#### Registered File List
+  1303→
+  1304→- Product analytics depends on the list of registered files.
+  1305→- Files not registered are not included in usage results.
+  1306→- User must maintain tracking coverage.
+  1307→
+  1308→#### Scan History
+  1309→
+  1310→- Trend and change detection depend on multiple scans.
+  1311→- First scan cannot produce increase/decrease trend.
+  1312→- Change detection is based on scan interval, not exact edit timestamp.
+  1313→
+  1314→#### UI Component Library
+  1315→
+  1316→- UI can use shadcn/ui as base component library.
+  1317→- Tables, badges, dialogs, drawers, tabs, and forms should follow consistent patterns.
+  1318→
+  1319→---
+  1320→
+  1321→### 7.2 Assumptions
+  1322→
+  1323→- The primary user is Design Ops or Design System Designer.
+  1324→- The first version is internal-use only.
+  1325→- The MVP tracks one main source UI Kit file.
+  1326→- User will manually register product files to track.
+  1327→- Analytics are expected to be scoped, not organization-wide.
+  1328→- User understands that the app is not real-time.
+  1329→- Scans may take time depending on file size and number of registered files.
+  1330→- The app does not need mobile-first layout for MVP.
+  1331→- The app does not need to edit Figma files.
+  1332→- The product value comes from visibility, not automation of design decisions.
+  1333→
+  1334→---
+  1335→
+  1336→### 7.3 Risks
+  1337→
+  1338→#### Risk 1: User expects global analytics
+  1339→
+  1340→Mitigation:
+  1341→
+  1342→- Use clear wording: “registered files” and “latest scan result”.
+  1343→- Add onboarding explanation.
+  1344→
+  1345→#### Risk 2: Data becomes stale
+  1346→
+  1347→Mitigation:
+  1348→
+  1349→- Show last scanned timestamp.
+  1350→- Add stale status.
+  1351→- Provide manual rescan.
+  1352→
+  1353→#### Risk 3: File access changes
+  1354→
+  1355→Mitigation:
+  1356→
+  1357→- Show permission/access error.
+  1358→- Keep previous successful data visible.
+  1359→- Allow retry.
+  1360→
+  1361→#### Risk 4: Too many files make scan slow
+  1362→
+  1363→Mitigation:
+  1364→
+  1365→- Show scan queue/progress.
+  1366→- Allow per-file scan.
+  1367→- Prioritize latest successful data in dashboard.
+  1368→
+  1369→#### Risk 5: Component rename causes confusion
+  1370→
+  1371→Mitigation:
+  1372→
+  1373→- Track component identity beyond display name in technical implementation.
+  1374→- Show component metadata.
+  1375→- Preserve history where possible.
+  1376→
+  1377→#### Risk 6: Detached components are not counted
+  1378→
+  1379→Mitigation:
+  1380→
+  1381→- Communicate that usage is based on linked component instances.
+  1382→- Consider detached detection as future enhancement.
+  1383→
+  1384→---
+  1385→
+  1386→## 8. Success Metrics
+  1387→
+  1388→### 8.1 Product Success Metrics
+  1389→
+  1390→- User can complete first setup successfully.
+  1391→- User can register source UI Kit.
+  1392→- User can register at least one product file.
+  1393→- User can run first scan successfully.
+  1394→- User can find a component and see file usage.
+  1395→- User can identify unused components.
+  1396→- User can see scan history.
+  1397→
+  1398→---
+  1399→
+  1400→### 8.2 Operational Metrics
+  1401→
+  1402→- Number of registered files
+  1403→- Number of scanned files
+  1404→- Scan success rate
+  1405→- Number of failed scans
+  1406→- Number of components tracked
+  1407→- Number of components with usage
+  1408→- Number of unused components
+  1409→- Number of low usage components
+  1410→
+  1411→---
+  1412→
+  1413→### 8.3 User Value Metrics
+  1414→
+  1415→- Time saved compared to manual checking.
+  1416→- Reduced manual file opening.
+  1417→- Faster component audit.
+  1418→- More confident deprecation decisions.
+  1419→- Better visibility of design system adoption.
+  1420→
+  1421→---
+  1422→
+  1423→## 9. MVP Definition
+  1424→
+  1425→### 9.1 MVP Must-Have
+  1426→
+  1427→The MVP must include:
+  1428→
+  1429→- Figma access setup
+  1430→- Source UI Kit registration
+  1431→- Registered files management
+  1432→- Manual scan
+  1433→- Component usage table
+  1434→- Component detail showing files used
+  1435→- File usage table
+  1436→- Scan history
+  1437→- Snapshot storage
+  1438→- Basic change detection
+  1439→- Basic insights: unused and low usage components
+  1440→
+  1441→---
+  1442→
+  1443→### 9.2 MVP Nice-to-Have
+  1444→
+  1445→The MVP may include:
+  1446→
+  1447→- Detail drawer instead of full page
+  1448→- Trend chart
+  1449→- CSV export
+  1450→- Command menu
+  1451→- Dark mode
+  1452→- Scheduled scan
+  1453→- Threshold settings
+  1454→- File grouping
+  1455→
+  1456→---
+  1457→
+  1458→### 9.3 MVP Not Included
+  1459→
+  1460→The MVP will not include:
+  1461→
+  1462→- AI agent
+  1463→- real-time tracking
+  1464→- automatic workspace-wide discovery
+  1465→- Slack notification
+  1466→- advanced role permissions
+  1467→- Figma plugin
+  1468→- direct modification to Figma files
+  1469→- full detached component analysis
+  1470→
+  1471→---
+  1472→
+  1473→## 10. Future Opportunities
+  1474→
+  1475→Potential future features:
+  1476→
+  1477→- Scheduled scan
+  1478→- Weekly usage report
+  1479→- Slack notification for failed scan or major changes
+  1480→- Figma plugin to register current file
+  1481→- Export to CSV
+  1482→- Design system adoption score
+  1483→- Deprecated component monitoring
+  1484→- Suggested cleanup list
+  1485→- Component replacement recommendation
+  1486→- AI-generated design system health summary
+  1487→- Multi-source UI Kit support
+  1488→- Team/squad grouping
+  1489→- Integration with Linear/Jira for design system tasks
+  1490→- Design linting for non-library usage
+  1491→- Detached component detection
+  1492→- Variable and style usage tracking
+  1493→
+  1494→---
+  1495→
+  1496→## 11. Open Questions
+  1497→
+  1498→- Will the first version track only one source UI Kit or support multiple UI Kits?
+  1499→- How many product files are expected in the first rollout?
+  1500→- Who will maintain the registered file list?
+  1501→- Should product designers be allowed to register their own files?
+  1502→- Should scan be manual only or scheduled from MVP?
+  1503→- What threshold defines low usage?
+  1504→- Should unused components include newly created components?
+  1505→- Should disabled files be excluded from historical trend?
+  1506→- Should the app support file grouping by squad/project?
+  1507→- Should design leads have a read-only view?
+  1508→- Should component status be manually editable?
+  1509→- Should there be a deprecation candidate workflow?
+  1510→- Should trend be shown daily, weekly, or per scan?
+  1511→- How should stale file threshold be defined?
+  1512→
+  1513→---
+  1514→
+  1515→## 12. Recommended Product Copy
+  1516→
+  1517→### Data Scope Disclaimer
+  1518→
+  1519→> Usage is calculated from registered Figma files that have been scanned.
+  1520→
+  1521→### Freshness Disclaimer
+  1522→
+  1523→> Data reflects the latest successful scan, not real-time Figma activity.
+  1524→
+  1525→### Empty Component Usage
+  1526→
+  1527→> This component was not found in any registered files during the latest scan.
+  1528→
+  1529→### First Scan Empty State
+  1530→
+  1531→> Register product files and run your first scan to start tracking design system component usage.
+  1532→
+  1533→### Failed Scan Message
+  1534→
+  1535→> This file could not be scanned. Check file access or try again.
+  1536→
+  1537→### Stale Data Message
+  1538→
+  1539→> This file has not been scanned recently. Usage data may be outdated.
+  1540→
+  1541→---
+  1542→
+  1543→## 13. Product Positioning Statement
+  1544→
+  1545→Design System Component Usage Tracker is an internal Design Ops dashboard that helps teams understand where design system components are used across registered Figma files. It provides component usage visibility, file-level adoption, scan history, and change detection so Design Ops can maintain the design system with more confidence and less manual checking.
+  1546→
+  1547→---
+  1548→
+  1549→## 14. Summary
+  1550→
+  1551→This product helps solve a core Design Ops problem: lack of visibility into where UI Kit/design system components are used.
+  1552→
+  1553→The product does not attempt to fully replace Figma Library Analytics or provide organization-wide automatic analytics. Instead, it provides a scoped, practical, and buildable tracker for registered files.
+  1554→
+  1555→The MVP should focus on:
+  1556→
+  1557→```txt
+  1558→Source UI Kit
+  1559→→ Registered Figma files
+  1560→→ Manual scan
+  1561→→ Component usage dashboard
+  1562→→ File usage dashboard
+  1563→→ Snapshot history
+  1564→→ Basic change detection
+  1565→```
+  1566→
+  1567→The desired user experience should feel clean, compact, and fast, taking inspiration from Figma Library Analytics for analytics concepts and Linear for interaction quality.

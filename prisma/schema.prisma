@@ -1,0 +1,267 @@
+// Componently — Design System Component Usage Tracker
+// Prisma schema (PostgreSQL). Aligned to the PRD data model:
+//   User -> Workspace -> Source UI Kit -> Components
+//                                 \-> Registered Files
+//                                 \-> ScanJobs -> Snapshots -> ComponentUsage
+//   Change detection between snapshots -> Changes
+//   App config -> Setting (key/value, scoped per workspace)
+//
+// Multi-tenancy: every domain row carries `workspaceId`.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// A human user. One user can belong to multiple workspaces via WorkspaceMember.
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String?
+  // Hashed password (scrypt). Never stored in plaintext.
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  memberships WorkspaceMember[]
+  sessions    Session[]
+
+  @@map("users")
+}
+
+/// A workspace = one isolated Componently tenant. All design-system data
+/// (components, files, scans) is scoped to a single workspace.
+model Workspace {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  members    WorkspaceMember[]
+  sourceKits SourceUiKit[]
+  components Component[]
+  files      RegisteredFile[]
+  scanJobs   ScanJob[]
+  snapshots  Snapshot[]
+  changes    Change[]
+  settings   Setting[]
+
+  @@map("workspaces")
+}
+
+/// Join table: which users can access which workspace, and with which role.
+model WorkspaceMember {
+  id          String   @id @default(cuid())
+  workspaceId String
+  userId      String
+  role        String   @default("owner") // owner | admin | viewer
+  createdAt   DateTime @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, userId])
+  @@index([userId])
+  @@map("workspace_members")
+}
+
+/// Server-side session record. Token is the cookie value, hashed at rest.
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("sessions")
+}
+
+/// The source design system / UI Kit file whose components are tracked.
+/// MVP tracks one source UI Kit per workspace.
+model SourceUiKit {
+  id             String   @id @default(cuid())
+  workspaceId    String
+  fileName       String
+  figmaFileKey   String
+  url            String
+  componentCount Int      @default(0)
+  connectedAt    DateTime @default(now())
+  lastSyncedAt   DateTime @default(now())
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  workspace  Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  components Component[]
+
+  @@unique([workspaceId, figmaFileKey])
+  @@index([workspaceId])
+  @@map("source_ui_kits")
+}
+
+/// A component from the source UI Kit. Identity is the figmaNodeKey + sourceUiKitId.
+model Component {
+  id                String   @id @default(cuid())
+  workspaceId       String
+  sourceUiKitId     String
+  name              String
+  set               String
+  description       String   @default("")
+  figmaNodeKey      String?
+  figmaComponentKey String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  workspace   Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  sourceUiKit SourceUiKit      @relation(fields: [sourceUiKitId], references: [id], onDelete: Cascade)
+  usages      ComponentUsage[]
+  changes     Change[]
+
+  @@unique([sourceUiKitId, figmaNodeKey])
+  @@index([workspaceId])
+  @@index([sourceUiKitId])
+  @@index([name])
+  @@index([set])
+  @@index([figmaComponentKey])
+  @@map("components")
+}
+
+/// A registered Figma consumer file that gets scanned for component usage.
+model RegisteredFile {
+  id           String   @id @default(cuid())
+  workspaceId  String
+  name         String
+  url          String
+  figmaFileKey String
+  team         String   @default("")
+  disabled     Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  workspace Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  usages    ComponentUsage[]
+  scans     ScanJob[]
+  changes   Change[]
+
+  @@unique([workspaceId, figmaFileKey])
+  @@index([workspaceId])
+  @@index([team])
+  @@index([disabled])
+  @@map("registered_files")
+}
+
+/// A scan execution. scope "all" scans every enabled file; "single" scans one file.
+model ScanJob {
+  id           String    @id @default(cuid())
+  workspaceId  String
+  scope        String    @default("all") // "all" | "single"
+  targetFileId String?
+  status       String    @default("Pending") // Pending | Running | Success | Failed | Paused
+  startedAt    DateTime  @default(now())
+  finishedAt   DateTime?
+  durationMs   Int?
+  filesOk      Int       @default(0)
+  filesFailed  Int       @default(0)
+  error        String?
+  createdAt    DateTime  @default(now())
+
+  workspace  Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  targetFile RegisteredFile? @relation(fields: [targetFileId], references: [id], onDelete: SetNull)
+  snapshot   Snapshot?
+  changes    Change[]
+
+  @@index([workspaceId])
+  @@index([status])
+  @@index([scope])
+  @@index([startedAt])
+  @@map("scan_jobs")
+}
+
+/// A saved snapshot of a successful scan. One snapshot per successful scan job.
+model Snapshot {
+  id             String   @id @default(cuid())
+  workspaceId    String
+  scanJobId      String   @unique
+  label          String
+  at             DateTime @default(now())
+  filesScanned   Int      @default(0)
+  totalInstances Int      @default(0)
+  componentsUsed Int      @default(0)
+  createdAt      DateTime @default(now())
+
+  workspace Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  scanJob   ScanJob          @relation(fields: [scanJobId], references: [id], onDelete: Cascade)
+  usages    ComponentUsage[]
+
+  @@index([workspaceId])
+  @@index([at])
+  @@map("snapshots")
+}
+
+/// Per-snapshot, per-component, per-file instance count.
+model ComponentUsage {
+  id          String  @id @default(cuid())
+  snapshotId  String
+  componentId String
+  fileId      String
+  instances   Int     @default(0)
+  page        String?
+
+  snapshot  Snapshot       @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
+  component Component      @relation(fields: [componentId], references: [id], onDelete: Cascade)
+  file      RegisteredFile @relation(fields: [fileId], references: [id], onDelete: Cascade)
+
+  @@index([snapshotId])
+  @@index([componentId])
+  @@index([fileId])
+  @@map("component_usages")
+}
+
+/// A detected change between the latest snapshot and the previous one.
+model Change {
+  id          String   @id @default(cuid())
+  workspaceId String
+  scanJobId   String
+  componentId String
+  fileId      String?
+  previous    Int      @default(0)
+  current     Int      @default(0)
+  type        String   @default("No Change")
+  at          DateTime @default(now())
+
+  scanJob   ScanJob         @relation(fields: [scanJobId], references: [id], onDelete: Cascade)
+  component Component       @relation(fields: [componentId], references: [id], onDelete: Cascade)
+  file      RegisteredFile? @relation(fields: [fileId], references: [id], onDelete: SetNull)
+  workspace Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+  @@index([scanJobId])
+  @@index([componentId])
+  @@index([type])
+  @@index([at])
+  @@map("changes")
+}
+
+/// App-wide settings stored as key/value pairs. Scoped per workspace so each
+/// tenant keeps its own thresholds, Figma access, etc.
+model Setting {
+  id          String   @id @default(cuid())
+  key         String
+  value       String
+  workspaceId String
+  updatedAt   DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, key])
+  @@index([workspaceId])
+  @@map("settings")
+}
