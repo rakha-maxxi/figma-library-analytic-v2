@@ -116,41 +116,46 @@ export async function importSourceUiKitComponents(input: {
     throw new Error("No components were found in this Figma file.");
   }
 
-  await db.$transaction(async (tx) => {
-    for (const component of components) {
-      await tx.component.upsert({
-        where: {
-          sourceUiKitId_figmaNodeKey: {
+  // Batch upserts without a transaction to avoid Neon/Vercel timeouts.
+  const batchSize = 50;
+  for (let i = 0; i < components.length; i += batchSize) {
+    const batch = components.slice(i, i + batchSize);
+    await Promise.all(
+      batch.map((component) =>
+        db.component.upsert({
+          where: {
+            sourceUiKitId_figmaNodeKey: {
+              sourceUiKitId: input.sourceUiKitId,
+              figmaNodeKey: component.figmaNodeKey,
+            },
+          },
+          update: {
+            workspaceId: input.workspaceId,
+            name: component.name,
+            set: component.set,
+            description: component.description,
+            figmaComponentKey: component.figmaComponentKey,
+          },
+          create: {
+            workspaceId: input.workspaceId,
             sourceUiKitId: input.sourceUiKitId,
             figmaNodeKey: component.figmaNodeKey,
+            figmaComponentKey: component.figmaComponentKey,
+            name: component.name,
+            set: component.set,
+            description: component.description,
           },
-        },
-        update: {
-          workspaceId: input.workspaceId,
-          name: component.name,
-          set: component.set,
-          description: component.description,
-          figmaComponentKey: component.figmaComponentKey,
-        },
-        create: {
-          workspaceId: input.workspaceId,
-          sourceUiKitId: input.sourceUiKitId,
-          figmaNodeKey: component.figmaNodeKey,
-          figmaComponentKey: component.figmaComponentKey,
-          name: component.name,
-          set: component.set,
-          description: component.description,
-        },
-      });
-    }
+        })
+      )
+    );
+  }
 
-    await tx.sourceUiKit.update({
-      where: { id: input.sourceUiKitId },
-      data: {
-        componentCount: components.length,
-        lastSyncedAt: new Date(),
-      },
-    });
+  await db.sourceUiKit.update({
+    where: { id: input.sourceUiKitId },
+    data: {
+      componentCount: components.length,
+      lastSyncedAt: new Date(),
+    },
   });
 
   return { imported: components.length, fileName: file.name };

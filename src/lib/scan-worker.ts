@@ -271,14 +271,18 @@ export async function runScan(scanJobId: string): Promise<ScanRunResult> {
     }
 
     if (componentKeyUpdates.length > 0) {
-      await db.$transaction(
-        componentKeyUpdates.map((update) =>
-          db.component.update({
-            where: { id: update.id },
-            data: { figmaComponentKey: update.figmaComponentKey },
-          })
-        )
-      );
+      const batchSize = 50;
+      for (let i = 0; i < componentKeyUpdates.length; i += batchSize) {
+        const batch = componentKeyUpdates.slice(i, i + batchSize);
+        await Promise.all(
+          batch.map((update) =>
+            db.component.update({
+              where: { id: update.id },
+              data: { figmaComponentKey: update.figmaComponentKey },
+            })
+          )
+        );
+      }
     }
 
     if (componentLookup.size === 0) {
