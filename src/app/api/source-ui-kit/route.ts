@@ -144,3 +144,19 @@ export const PATCH = withWorkspace(async (_req, ctx) => {
   if (!updated) return json({ error: "Source UI Kit not found after refresh." }, 404);
   return json(sourceUiKitPayload(updated));
 });
+
+/**
+ * DELETE /api/source-ui-kit
+ * Remove the source UI Kit and all its components from the workspace.
+ * Cascades to component usages and changes.
+ */
+export const DELETE = withWorkspace(async (_req, ctx) => {
+  const kit = await db.sourceUiKit.findFirst({
+    where: { workspaceId: ctx.workspaceId },
+  });
+  if (!kit) return json({ error: "No source UI Kit registered" }, 404);
+
+  await db.sourceUiKit.delete({ where: { id: kit.id } });
+
+  return json({ ok: true });
+});

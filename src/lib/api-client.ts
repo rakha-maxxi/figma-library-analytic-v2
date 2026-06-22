@@ -731,3 +731,20 @@ export function useReplaceSourceUiKit() {
     },
   });
 }
+
+/** Remove the source UI Kit and all its components from the workspace. */
+export function useRemoveSourceUiKit() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => send<{ ok: boolean }>("/api/source-ui-kit", "DELETE"),
+    onSuccess: () => {
+      qc.setQueryData(qk.sourceUiKit, null);
+      qc.invalidateQueries({ queryKey: qk.overview });
+      qc.invalidateQueries({ queryKey: qk.insights });
+      qc.invalidateQueries({ queryKey: ["components"] });
+      qc.invalidateQueries({ queryKey: ["files"] });
+      qc.invalidateQueries({ queryKey: ["changes"] });
+      qc.invalidateQueries({ queryKey: qk.scans({}) });
+    },
+  });
+}

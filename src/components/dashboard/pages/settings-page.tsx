@@ -11,6 +11,7 @@ import {
   ExternalLink,
   AlertTriangle,
   Loader2,
+  Trash2,
 } from "lucide-react";
 import { PageHeader } from "../primitives";
 import { Button } from "@/components/ui/button";
@@ -32,6 +33,7 @@ import {
   useReplaceFigmaToken,
   useDisconnectFigma,
   useReplaceSourceUiKit,
+  useRemoveSourceUiKit,
 } from "@/lib/api-client";
 import { formatRelative, formatDateTime } from "@/lib/format";
 import { LoadingRows, ErrorBanner } from "../loading-states";
@@ -46,9 +48,11 @@ export function SettingsPage() {
   const replaceToken = useReplaceFigmaToken();
   const disconnectFigma = useDisconnectFigma();
   const replaceKit = useReplaceSourceUiKit();
+  const removeKit = useRemoveSourceUiKit();
 
   const [tokenDialogOpen, setTokenDialogOpen] = React.useState(false);
   const [kitDialogOpen, setKitDialogOpen] = React.useState(false);
+  const [removeDialogOpen, setRemoveDialogOpen] = React.useState(false);
 
   const lowThreshold = settings?.lowUsageThreshold ?? 500;
   const staleDays = settings?.staleDaysThreshold ?? 7;
@@ -172,6 +176,16 @@ export function SettingsPage() {
                 {refreshKit.isPending ? "Importing…" : "Refresh from Figma"}
               </Button>
               <Button variant="ghost" size="sm" className="h-8" onClick={() => setKitDialogOpen(true)}>Replace</Button>
+              {kit && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 text-rose-600 hover:text-rose-700 hover:bg-rose-50"
+                  onClick={() => setRemoveDialogOpen(true)}
+                >
+                  Remove
+                </Button>
+              )}
             </div>
           </div>
           {kit && (
@@ -296,6 +310,22 @@ export function SettingsPage() {
               setKitDialogOpen(false);
             },
             onError: (err) => toast.error("Failed to replace source UI Kit", { description: err.message }),
+          });
+        }}
+      />
+
+      <RemoveSourceUiKitDialog
+        open={removeDialogOpen}
+        onOpenChange={setRemoveDialogOpen}
+        fileName={kit?.fileName ?? ""}
+        isRemoving={removeKit.isPending}
+        onConfirm={() => {
+          removeKit.mutate(undefined, {
+            onSuccess: () => {
+              toast.success("Source UI Kit removed", { description: "All components and usage data have been deleted." });
+              setRemoveDialogOpen(false);
+            },
+            onError: (err) => toast.error("Failed to remove", { description: err.message }),
           });
         }}
       />
@@ -550,6 +580,53 @@ function ReplaceSourceUiKitDialog({
             </Button>
           </DialogFooter>
         </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* Remove source UI Kit dialog                                                */
+/* -------------------------------------------------------------------------- */
+
+function RemoveSourceUiKitDialog({
+  open,
+  onOpenChange,
+  fileName,
+  isRemoving,
+  onConfirm,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  fileName: string;
+  isRemoving: boolean;
+  onConfirm: () => void;
+}) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Remove source UI Kit</DialogTitle>
+          <DialogDescription>
+            This permanently removes <span className="font-medium text-foreground">{fileName}</span>{" "}
+            and all its components, usage data, and change history from your workspace.
+            This action cannot be undone.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button type="button" variant="ghost" size="sm" onClick={() => onOpenChange(false)} disabled={isRemoving}>
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            disabled={isRemoving}
+            className="bg-rose-600 text-white hover:bg-rose-700"
+            onClick={onConfirm}
+          >
+            {isRemoving ? "Removing…" : "Remove UI Kit"}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
