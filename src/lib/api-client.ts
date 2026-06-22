@@ -226,6 +226,7 @@ export function useOverview() {
   return useQuery({
     queryKey: qk.overview,
     queryFn: () => get<OverviewStats>("/api/overview"),
+    staleTime: 30_000,
   });
 }
 
@@ -233,6 +234,7 @@ export function useSourceUiKit() {
   return useQuery({
     queryKey: qk.sourceUiKit,
     queryFn: () => get<SourceUiKit>("/api/source-ui-kit"),
+    staleTime: 60_000,
   });
 }
 
@@ -243,6 +245,7 @@ export function useComponents(params: Record<string, string> = {}) {
   return useQuery({
     queryKey: qk.components(params),
     queryFn: () => get<{ total: number; items: ComponentItem[] }>(`/api/components${search ? `?${search}` : ""}`),
+    staleTime: 60_000,
   });
 }
 
@@ -251,6 +254,7 @@ export function useComponent(id: string | null) {
     queryKey: qk.component(id ?? ""),
     queryFn: () => get<ComponentDetail>(`/api/components/${id}`),
     enabled: !!id,
+    staleTime: 60_000,
   });
 }
 
@@ -261,6 +265,7 @@ export function useFiles(params: Record<string, string> = {}) {
   return useQuery({
     queryKey: qk.files(params),
     queryFn: () => get<{ total: number; items: FileItem[] }>(`/api/files${search ? `?${search}` : ""}`),
+    staleTime: 60_000,
   });
 }
 
@@ -269,6 +274,7 @@ export function useFile(id: string | null) {
     queryKey: qk.file(id ?? ""),
     queryFn: () => get<FileDetail>(`/api/files/${id}`),
     enabled: !!id,
+    staleTime: 60_000,
   });
 }
 
@@ -294,6 +300,7 @@ export function useSnapshots() {
   return useQuery({
     queryKey: qk.snapshots,
     queryFn: () => get<{ total: number; items: SnapshotItem[] }>("/api/snapshots"),
+    staleTime: 60_000,
   });
 }
 
@@ -304,6 +311,7 @@ export function useChanges(params: Record<string, string> = {}) {
   return useQuery({
     queryKey: qk.changes(params),
     queryFn: () => get<{ total: number; lastScanLabel: string | null; items: ChangeItem[] }>(`/api/changes${search ? `?${search}` : ""}`),
+    staleTime: 30_000,
   });
 }
 
@@ -311,6 +319,7 @@ export function useInsights() {
   return useQuery({
     queryKey: qk.insights,
     queryFn: () => get<InsightsData>("/api/insights"),
+    staleTime: 120_000,
   });
 }
 
@@ -318,6 +327,7 @@ export function useSettings() {
   return useQuery({
     queryKey: qk.settings,
     queryFn: () => get<Settings>("/api/settings"),
+    staleTime: 60_000,
   });
 }
 

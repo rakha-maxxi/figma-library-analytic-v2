@@ -1,4 +1,5 @@
-import { db, json, qs, withWorkspace } from "@/lib/api";
+import { db, cachedJson, qs, withWorkspace } from "@/lib/api";
+import { workspaceCacheKey } from "@/lib/cache";
 import { getLatestSnapshot } from "@/lib/api-queries";
 
 /**
@@ -9,9 +10,11 @@ export const GET = withWorkspace(async (req, ctx) => {
   const url = new URL(req.url);
   const type = qs(url.searchParams.get("type"), "All");
   const limit = Math.min(Number(url.searchParams.get("limit") ?? "50"), 200);
+  const cacheKey = workspaceCacheKey(ctx.workspaceId, "recent-changes", [type, limit]);
+  return cachedJson(cacheKey, 60, async () => {
 
   const latest = await getLatestSnapshot(ctx.workspaceId);
-  if (!latest) return json({ total: 0, items: [], lastScanLabel: null });
+  if (!latest) return { total: 0, items: [], lastScanLabel: null };
 
   const where: any = {
     workspaceId: ctx.workspaceId,
@@ -26,7 +29,7 @@ export const GET = withWorkspace(async (req, ctx) => {
     include: { component: true, file: true },
   });
 
-  return json({
+  return {
     total: changes.length,
     lastScanLabel: latest.label,
     items: changes.map((c) => ({
@@ -40,5 +43,6 @@ export const GET = withWorkspace(async (req, ctx) => {
       type: c.type,
       at: c.at,
     })),
+  };
   });
 });

@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { dbMetrics, type DbMetricStore } from "@/lib/db";
 import { AuthError, getCurrentUser } from "@/lib/auth";
+import { cacheAvailable, getCache, setCache } from "@/lib/cache";
 
 /**
  * Helpers for App Router API handlers.
@@ -44,17 +46,55 @@ export function withWorkspace<Args extends unknown[]>(
   handler: (req: Request, ctx: WorkspaceContext, ...args: Args) => Promise<Response>
 ) {
   return async (req: Request, ...args: Args): Promise<Response> => {
+    const start = Date.now();
+    const metrics: DbMetricStore = { count: 0, slow: [] };
+    let response: Response;
     try {
       const ctx = await requireWorkspaceUser();
-      return await handler(req, ctx, ...args);
+      response = await dbMetrics.run(metrics, () => handler(req, ctx, ...args));
     } catch (err) {
-      return apiError(err);
+      response = apiError(err);
     }
+
+    logApiMetrics(req, response, start, metrics);
+    return response;
   };
 }
 
-export function json(data: unknown, status = 200) {
-  return NextResponse.json(data, { status });
+function logApiMetrics(req: Request, res: Response, start: number, metrics: DbMetricStore) {
+  const url = new URL(req.url);
+  const duration = Date.now() - start;
+  const payload = res.headers.get("content-length") ?? "?";
+  const cache = res.headers.get("x-componently-cache") ?? "bypass";
+  const slow = metrics.slow.length > 0 ? ` slow=${metrics.slow.join(" | ")}` : "";
+  console.log(`[api] ${req.method} ${url.pathname} ${duration}ms db=${metrics.count} cache=${cache} payload=${payload}${slow}`);
+}
+
+export function json(data: unknown, status = 200, init?: ResponseInit) {
+  const raw = JSON.stringify(data);
+  const headers = new Headers(init?.headers);
+  headers.set("content-length", String(Buffer.byteLength(raw)));
+  headers.set("content-type", "application/json");
+  return new NextResponse(raw, { ...init, status, headers });
+}
+
+export async function cachedJson<T>(
+  key: string,
+  ttlSeconds: number,
+  load: () => Promise<T>
+) {
+  if (!cacheAvailable()) {
+    return json(await load(), 200, { headers: { "x-componently-cache": "bypass" } });
+  }
+
+  const cached = await getCache<T>(key);
+  if (cached.hit) {
+    return json(cached.value, 200, { headers: { "x-componently-cache": "hit" } });
+  }
+
+  const data = await load();
+  await setCache(key, data, ttlSeconds);
+  return json(data, 200, { headers: { "x-componently-cache": "miss" } });
 }
 
 export function apiError(err: unknown): Response {

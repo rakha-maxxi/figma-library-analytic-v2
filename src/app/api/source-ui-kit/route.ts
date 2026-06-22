@@ -1,4 +1,5 @@
 import { db, json, withWorkspace } from "@/lib/api";
+import { invalidateWorkspaceCache } from "@/lib/cache";
 import { importSourceUiKitComponents } from "@/lib/figma-importer";
 
 type SourceUiKitWithCount = NonNullable<Awaited<ReturnType<typeof db.sourceUiKit.findFirst>>> & {
@@ -71,6 +72,7 @@ export const POST = withWorkspace(async (req, ctx) => {
       include: { _count: { select: { components: true } } },
     });
     if (!refreshed) return json({ error: "Source UI Kit not found after refresh." }, 404);
+    await invalidateWorkspaceCache(ctx.workspaceId);
     return json(sourceUiKitPayload(refreshed));
   }
 
@@ -111,6 +113,7 @@ export const POST = withWorkspace(async (req, ctx) => {
     include: { _count: { select: { components: true } } },
   });
   if (!refreshed) return json({ error: "Source UI Kit not found after import." }, 404);
+  await invalidateWorkspaceCache(ctx.workspaceId);
   return json(sourceUiKitPayload(refreshed), 201);
 });
 
@@ -142,6 +145,7 @@ export const PATCH = withWorkspace(async (_req, ctx) => {
     include: { _count: { select: { components: true } } },
   });
   if (!updated) return json({ error: "Source UI Kit not found after refresh." }, 404);
+  await invalidateWorkspaceCache(ctx.workspaceId);
   return json(sourceUiKitPayload(updated));
 });
 
@@ -157,6 +161,7 @@ export const DELETE = withWorkspace(async (_req, ctx) => {
   if (!kit) return json({ error: "No source UI Kit registered" }, 404);
 
   await db.sourceUiKit.delete({ where: { id: kit.id } });
+  await invalidateWorkspaceCache(ctx.workspaceId);
 
   return json({ ok: true });
 });

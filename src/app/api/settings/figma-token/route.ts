@@ -1,4 +1,5 @@
 import { json, withWorkspace } from "@/lib/api";
+import { invalidateWorkspaceCache } from "@/lib/cache";
 import { encryptSecret } from "@/lib/secret";
 import { setWorkspaceSetting, clearWorkspaceSetting } from "@/lib/settings-store";
 
@@ -22,6 +23,7 @@ export const PUT = withWorkspace(async (req, ctx) => {
   await setWorkspaceSetting(ctx.workspaceId, "figma_connected", "true");
   await setWorkspaceSetting(ctx.workspaceId, "figma_token_hint", hint);
   await setWorkspaceSetting(ctx.workspaceId, "figma_token_encrypted", encryptSecret(t));
+  await invalidateWorkspaceCache(ctx.workspaceId);
 
   return json({ ok: true, figmaConnected: true, figmaTokenHint: hint });
 });
@@ -33,5 +35,6 @@ export const DELETE = withWorkspace(async (_req, ctx) => {
   await setWorkspaceSetting(ctx.workspaceId, "figma_connected", "false");
   await setWorkspaceSetting(ctx.workspaceId, "figma_token_hint", "");
   await clearWorkspaceSetting(ctx.workspaceId, "figma_token_encrypted");
+  await invalidateWorkspaceCache(ctx.workspaceId);
   return json({ ok: true, figmaConnected: false, figmaTokenHint: "" });
 });

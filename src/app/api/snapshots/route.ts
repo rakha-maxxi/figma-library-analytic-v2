@@ -1,4 +1,5 @@
-import { db, json, qi, withWorkspace } from "@/lib/api";
+import { db, cachedJson, qi, withWorkspace } from "@/lib/api";
+import { workspaceCacheKey } from "@/lib/cache";
 
 /**
  * GET /api/snapshots
@@ -6,13 +7,15 @@ import { db, json, qi, withWorkspace } from "@/lib/api";
 export const GET = withWorkspace(async (req, ctx) => {
   const url = new URL(req.url);
   const limit = Math.min(qi(url.searchParams.get("limit"), 20), 100);
+  const cacheKey = workspaceCacheKey(ctx.workspaceId, "snapshots:list", [limit]);
+  return cachedJson(cacheKey, 60, async () => {
   const snapshots = await db.snapshot.findMany({
     where: { workspaceId: ctx.workspaceId },
     orderBy: { at: "desc" },
     take: limit,
     include: { scanJob: true },
   });
-  return json({
+  return {
     total: snapshots.length,
     items: snapshots.map((s) => ({
       id: s.id,
@@ -24,5 +27,6 @@ export const GET = withWorkspace(async (req, ctx) => {
       scanJobId: s.scanJobId,
       scanStatus: s.scanJob.status,
     })),
+  };
   });
 });

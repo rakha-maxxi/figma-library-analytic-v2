@@ -1,4 +1,5 @@
-import { db, json, qs, withWorkspace } from "@/lib/api";
+import { db, cachedJson, json, qi, qs, withWorkspace } from "@/lib/api";
+import { invalidateWorkspaceCache, workspaceCacheKey } from "@/lib/cache";
 import { getFilesWithUsage } from "@/lib/api-queries";
 
 /**
@@ -11,7 +12,11 @@ export const GET = withWorkspace(async (req, ctx) => {
   const url = new URL(req.url);
   const search = qs(url.searchParams.get("search")).toLowerCase();
   const status = qs(url.searchParams.get("status"), "All");
+  const limit = Math.min(qi(url.searchParams.get("limit"), 100), 250);
+  const offset = Math.max(qi(url.searchParams.get("offset"), 0), 0);
 
+  const cacheKey = workspaceCacheKey(ctx.workspaceId, "files:list", [search, status, limit, offset]);
+  return cachedJson(cacheKey, 120, async () => {
   let files = await getFilesWithUsage(ctx.workspaceId);
 
   if (search) {
@@ -25,7 +30,10 @@ export const GET = withWorkspace(async (req, ctx) => {
     files = files.filter((f) => f.status === status);
   }
 
-  return json({ total: files.length, items: files });
+  const total = files.length;
+  const items = files.slice(offset, offset + limit);
+  return { total, limit, offset, hasMore: offset + items.length < total, items };
+  });
 });
 
 /**
@@ -73,5 +81,6 @@ export const POST = withWorkspace(async (req, ctx) => {
     added.push(created);
   }
 
+  await invalidateWorkspaceCache(ctx.workspaceId);
   return json({ added: added.length, skipped, items: added }, 201);
 });

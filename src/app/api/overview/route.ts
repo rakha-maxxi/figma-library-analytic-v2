@@ -1,9 +1,10 @@
 import {
   db,
-  json,
+  cachedJson,
   withWorkspace,
   type WorkspaceContext,
 } from "@/lib/api";
+import { workspaceCacheKey } from "@/lib/cache";
 import {
   getComponentsWithUsage,
   getFilesWithUsage,
@@ -20,6 +21,8 @@ import {
  * it to both helpers, running them in parallel to minimize round-trips.
  */
 export const GET = withWorkspace(async (_req, ctx: WorkspaceContext) => {
+  const cacheKey = workspaceCacheKey(ctx.workspaceId, "overview");
+  return cachedJson(cacheKey, 45, async () => {
   const [latest, previous, thresholds] = await Promise.all([
     getLatestSnapshot(ctx.workspaceId),
     getPreviousSnapshot(ctx.workspaceId),
@@ -46,7 +49,7 @@ export const GET = withWorkspace(async (_req, ctx: WorkspaceContext) => {
     ? Math.round((healthyFiles / enabledFiles.length) * 1000) / 10
     : 0;
 
-  return json({
+  return {
     totalComponents: components.length,
     registeredFiles: files.length,
     totalInstances,
@@ -58,5 +61,6 @@ export const GET = withWorkspace(async (_req, ctx: WorkspaceContext) => {
     lastScanLabel: latest?.label ?? null,
     adoptionRate,
     filesScannedInLatest: latest?.filesScanned ?? 0,
+  };
   });
 });

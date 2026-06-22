@@ -1,4 +1,5 @@
-import { db, json, qs, withWorkspace } from "@/lib/api";
+import { db, cachedJson, json, qs, withWorkspace } from "@/lib/api";
+import { invalidateWorkspaceScanCache, workspaceCacheKey } from "@/lib/cache";
 import { runScan, triggerScanInBackground } from "@/lib/scan-worker";
 
 /** Auto-recover scans stuck in Pending/Running for more than 5 minutes. */
@@ -37,6 +38,9 @@ export const GET = withWorkspace(async (req, ctx) => {
   const status = qs(url.searchParams.get("status"), "All");
   const scope = qs(url.searchParams.get("scope"), "All");
   const limit = Math.min(Number(url.searchParams.get("limit") ?? "50"), 200);
+  const cacheKey = workspaceCacheKey(ctx.workspaceId, "scans:history", [status, scope, limit]);
+  const ttl = status === "Pending" || status === "Running" ? 3 : 30;
+  return cachedJson(cacheKey, ttl, async () => {
 
   const where: any = { workspaceId: ctx.workspaceId };
   if (status !== "All") where.status = status;
@@ -49,7 +53,7 @@ export const GET = withWorkspace(async (req, ctx) => {
     include: { targetFile: true, snapshot: true },
   });
 
-  return json({
+  return {
     total: scans.length,
     items: scans.map((s) => ({
       id: s.id,
@@ -75,6 +79,7 @@ export const GET = withWorkspace(async (req, ctx) => {
           }
         : null,
     })),
+  };
   });
 });
 
@@ -114,6 +119,7 @@ export const POST = withWorkspace(async (req, ctx) => {
       status: "Pending",
     },
   });
+  await invalidateWorkspaceScanCache(ctx.workspaceId);
 
   // Run the worker in the background. The POST returns immediately so the
   // dashboard can poll /api/scans and watch Pending → Running → Success.

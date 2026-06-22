@@ -1,4 +1,5 @@
-import { db, json, withWorkspace } from "@/lib/api";
+import { db, cachedJson, withWorkspace } from "@/lib/api";
+import { workspaceCacheKey } from "@/lib/cache";
 import {
   getComponentsWithUsage,
   getFilesWithUsage,
@@ -14,6 +15,8 @@ import {
  * running them in parallel to minimize DB round-trips.
  */
 export const GET = withWorkspace(async (_req, ctx) => {
+  const cacheKey = workspaceCacheKey(ctx.workspaceId, "insights");
+  return cachedJson(cacheKey, 180, async () => {
   const [latest, previous, thresholds] = await Promise.all([
     getLatestSnapshot(ctx.workspaceId),
     getPreviousSnapshot(ctx.workspaceId),
@@ -84,7 +87,7 @@ export const GET = withWorkspace(async (_req, ctx) => {
     }));
   }
 
-  return json({
+  return {
     thresholds: { lowUsage: thresholds.lowUsage, staleDays: thresholds.staleDays },
     lastScanLabel: latest?.label ?? null,
     summary: {
@@ -105,5 +108,6 @@ export const GET = withWorkspace(async (_req, ctx) => {
       error: s.error,
     })),
     recentChanges,
+  };
   });
 });

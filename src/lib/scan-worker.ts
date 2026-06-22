@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { invalidateWorkspaceCache, invalidateWorkspaceScanCache } from "@/lib/cache";
 import { importSourceUiKitComponents } from "@/lib/figma-importer";
 import { decryptSecret } from "@/lib/secret";
 import { getWorkspaceSetting } from "@/lib/settings-store";
@@ -413,6 +414,7 @@ export async function runScan(scanJobId: string): Promise<ScanRunResult> {
         filesFailed,
       },
     });
+    await invalidateWorkspaceCache(job.workspaceId);
 
     return {
       scanJobId,
@@ -433,6 +435,7 @@ export async function runScan(scanJobId: string): Promise<ScanRunResult> {
         durationMs: 0,
       },
     });
+    await invalidateWorkspaceScanCache(job.workspaceId);
     return { scanJobId, status: "Failed", filesOk: 0, filesFailed: 0, snapshotId: null, error: message };
   }
 }

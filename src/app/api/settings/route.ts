@@ -1,4 +1,5 @@
 import { db, json, withWorkspace } from "@/lib/api";
+import { invalidateWorkspaceCache } from "@/lib/cache";
 
 const DEFAULTS: Record<string, string> = {
   figma_connected: "true",
@@ -60,5 +61,6 @@ export const PUT = withWorkspace(async (req, ctx) => {
     });
   }
 
+  await invalidateWorkspaceCache(ctx.workspaceId);
   return json(await loadSettings(ctx.workspaceId));
 });

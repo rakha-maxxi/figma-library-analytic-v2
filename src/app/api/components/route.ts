@@ -1,8 +1,6 @@
-import {
-  getComponentsWithUsage,
-  getLatestSnapshot,
-} from "@/lib/api-queries";
-import { json, qs, withWorkspace } from "@/lib/api";
+import { getComponentsWithUsage } from "@/lib/api-queries";
+import { cachedJson, qi, qs, withWorkspace } from "@/lib/api";
+import { workspaceCacheKey } from "@/lib/cache";
 
 /**
  * GET /api/components
@@ -24,7 +22,11 @@ export const GET = withWorkspace(async (req, ctx) => {
     | "name"
     | "seen";
   const dir = qs(url.searchParams.get("dir"), "desc") as "asc" | "desc";
+  const limit = Math.min(qi(url.searchParams.get("limit"), 100), 250);
+  const offset = Math.max(qi(url.searchParams.get("offset"), 0), 0);
 
+  const cacheKey = workspaceCacheKey(ctx.workspaceId, "components:list", [search, status, setFilter, sort, dir, limit, offset]);
+  return cachedJson(cacheKey, 120, async () => {
   let components = await getComponentsWithUsage(ctx.workspaceId);
 
   if (search) {
@@ -52,8 +54,15 @@ export const GET = withWorkspace(async (req, ctx) => {
     return dir === "asc" ? cmp : -cmp;
   });
 
-  return json({
-    total: components.length,
-    items: components,
+  const total = components.length;
+  const items = components.slice(offset, offset + limit);
+
+  return {
+    total,
+    limit,
+    offset,
+    hasMore: offset + items.length < total,
+    items,
+  };
   });
 });

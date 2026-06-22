@@ -1,4 +1,5 @@
 import { db, json, withWorkspace } from "@/lib/api";
+import { getCache, setCache, workspaceCacheKey } from "@/lib/cache";
 import {
   computeComponentStatus,
   getLatestSnapshot,
@@ -17,6 +18,9 @@ import {
 export const GET = withWorkspace(
   async (_req, ctx, { params }: { params: Promise<{ id: string }> }) => {
     const { id } = await params;
+    const cacheKey = workspaceCacheKey(ctx.workspaceId, "components:detail", [id]);
+    const cached = await getCache(cacheKey);
+    if (cached.hit) return json(cached.value, 200, { headers: { "x-componently-cache": "hit" } });
 
     const [component, latest, previous, thresholds] = await Promise.all([
       db.component.findFirst({ where: { id, workspaceId: ctx.workspaceId } }),
@@ -96,7 +100,7 @@ export const GET = withWorkspace(
       instances: trendMap.get(s.id) ?? 0,
     }));
 
-    return json({
+    const payload = {
       id: component.id,
       name: component.name,
       set: component.set,
@@ -112,6 +116,8 @@ export const GET = withWorkspace(
       change: totalInstances - prevInstances,
       fileUsage,
       trend,
-    });
+    };
+    await setCache(cacheKey, payload, 120);
+    return json(payload, 200, { headers: { "x-componently-cache": "miss" } });
   }
 );

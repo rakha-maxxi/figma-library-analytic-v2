@@ -127,6 +127,8 @@ model Component {
 
   @@unique([sourceUiKitId, figmaNodeKey])
   @@index([workspaceId])
+  @@index([workspaceId, name])
+  @@index([workspaceId, set])
   @@index([sourceUiKitId])
   @@index([name])
   @@index([set])
@@ -153,6 +155,9 @@ model RegisteredFile {
 
   @@unique([workspaceId, figmaFileKey])
   @@index([workspaceId])
+  @@index([workspaceId, name])
+  @@index([workspaceId, team])
+  @@index([workspaceId, disabled])
   @@index([team])
   @@index([disabled])
   @@map("registered_files")
@@ -179,6 +184,9 @@ model ScanJob {
   changes    Change[]
 
   @@index([workspaceId])
+  @@index([workspaceId, status, startedAt])
+  @@index([workspaceId, scope, startedAt])
+  @@index([workspaceId, targetFileId, startedAt])
   @@index([status])
   @@index([scope])
   @@index([startedAt])
@@ -202,6 +210,7 @@ model Snapshot {
   usages    ComponentUsage[]
 
   @@index([workspaceId])
+  @@index([workspaceId, at])
   @@index([at])
   @@map("snapshots")
 }
@@ -220,6 +229,9 @@ model ComponentUsage {
   file      RegisteredFile @relation(fields: [fileId], references: [id], onDelete: Cascade)
 
   @@index([snapshotId])
+  @@index([snapshotId, componentId])
+  @@index([snapshotId, fileId])
+  @@index([componentId, fileId])
   @@index([componentId])
   @@index([fileId])
   @@map("component_usages")
@@ -243,6 +255,8 @@ model Change {
   workspace Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@index([workspaceId])
+  @@index([workspaceId, scanJobId])
+  @@index([workspaceId, type, at])
   @@index([scanJobId])
   @@index([componentId])
   @@index([type])

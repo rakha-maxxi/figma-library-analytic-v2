@@ -1,4 +1,5 @@
 import { db, json, withWorkspace } from "@/lib/api";
+import { getCache, invalidateWorkspaceCache, setCache, workspaceCacheKey } from "@/lib/cache";
 import {
   computeFileStatus,
   getLatestSnapshot,
@@ -15,6 +16,9 @@ import {
 export const GET = withWorkspace(
   async (_req, ctx, { params }: { params: Promise<{ id: string }> }) => {
     const { id } = await params;
+    const cacheKey = workspaceCacheKey(ctx.workspaceId, "files:detail", [id]);
+    const cached = await getCache(cacheKey);
+    if (cached.hit) return json(cached.value, 200, { headers: { "x-componently-cache": "hit" } });
 
     const [file, latest, thresholds] = await Promise.all([
       db.registeredFile.findFirst({ where: { id, workspaceId: ctx.workspaceId } }),
@@ -76,7 +80,7 @@ export const GET = withWorkspace(
     const lastScanned = lastSingleScan?.finishedAt ?? lastAllScan?.finishedAt ?? null;
     const hasFailed = lastSingleScan?.status === "Failed";
 
-    return json({
+    const payload = {
       id: file.id,
       name: file.name,
       url: file.url,
@@ -90,7 +94,9 @@ export const GET = withWorkspace(
       status: computeFileStatus(uniqueComponents, lastScanned, hasFailed, thresholds.staleDays, file.disabled),
       lastScanned,
       componentsUsed,
-    });
+    };
+    await setCache(cacheKey, payload, 120);
+    return json(payload, 200, { headers: { "x-componently-cache": "miss" } });
   }
 );
 
@@ -121,6 +127,7 @@ export const PATCH = withWorkspace(
         ...(disabled !== undefined ? { disabled } : {}),
       },
     });
+    await invalidateWorkspaceCache(ctx.workspaceId);
     return json(updated);
   }
 );
@@ -137,6 +144,7 @@ export const DELETE = withWorkspace(
     });
     if (!existing) return json({ error: "File not found" }, 404);
     await db.registeredFile.delete({ where: { id } });
+    await invalidateWorkspaceCache(ctx.workspaceId);
     return json({ ok: true, id });
   }
 );

@@ -1,4 +1,5 @@
 import { db, json, withWorkspace } from "@/lib/api";
+import { invalidateWorkspaceScanCache } from "@/lib/cache";
 import { triggerScanInBackground } from "@/lib/scan-worker";
 
 /**
@@ -36,6 +37,7 @@ export const PATCH = withWorkspace(
         where: { id },
         data: { status: "Pending", error: null, startedAt: new Date() },
       });
+      await invalidateWorkspaceScanCache(ctx.workspaceId);
       // Re-run the worker in the background.
       triggerScanInBackground(id);
       return json(updated);
