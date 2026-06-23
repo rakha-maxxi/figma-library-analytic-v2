@@ -20,7 +20,7 @@ const dmMono = DM_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Componently — Design System Component Usage Tracker",
+  title: "Atomisense — Design System Component Usage Tracker",
   description:
     "Track design system component usage across your registered Figma files based on scan history. An internal Design Ops dashboard for adoption, change detection, and governance.",
   keywords: [
@@ -32,21 +32,21 @@ export const metadata: Metadata = {
     "component adoption",
     "design system governance",
   ],
-  authors: [{ name: "Componently" }],
+  authors: [{ name: "Atomisense" }],
   icons: {
     icon: "https://z-cdn.chatglm.cn/z-ai/static/logo.svg",
   },
   openGraph: {
-    title: "Componently — Design System Component Usage Tracker",
+    title: "Atomisense — Design System Component Usage Tracker",
     description:
       "See where every design system component is used across your registered Figma files. Scan-based history, change detection, and governance insights for Design Ops.",
     url: "https://chat.z.ai",
-    siteName: "Componently",
+    siteName: "Atomisense",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Componently — Design System Component Usage Tracker",
+    title: "Atomisense — Design System Component Usage Tracker",
     description:
       "Track design system component usage across registered Figma files based on scan history.",
   },

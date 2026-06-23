@@ -20,7 +20,7 @@ export const GET = withWorkspace(
     const { id } = await params;
     const cacheKey = workspaceCacheKey(ctx.workspaceId, "components:detail", [id]);
     const cached = await getCache(cacheKey);
-    if (cached.hit) return json(cached.value, 200, { headers: { "x-componently-cache": "hit" } });
+    if (cached.hit) return json(cached.value, 200, { headers: { "x-atomisense-cache": "hit" } });
 
     const [component, latest, previous, thresholds] = await Promise.all([
       db.component.findFirst({ where: { id, workspaceId: ctx.workspaceId } }),
@@ -118,6 +118,6 @@ export const GET = withWorkspace(
       trend,
     };
     await setCache(cacheKey, payload, 120);
-    return json(payload, 200, { headers: { "x-componently-cache": "miss" } });
+    return json(payload, 200, { headers: { "x-atomisense-cache": "miss" } });
   }
 );

@@ -1,11 +1,11 @@
 /**
- * Seed script for Componently.
+ * Seed script for Atomisense.
  *
  * Creates a single demo user + a personal workspace — NO demo data.
  * New users should see an empty dashboard on first login and set up their
  * own source UI Kit + files before they can scan anything.
  *
- *  - demo@componently.app / demo1234
+ *  - demo@atomisense.app / demo1234
  *  - rakhacimano@gmail.com / Rakha123!
  *
  * Run: bun run db:seed (or: node --experimental-strip-types prisma/seed.ts)
@@ -46,7 +46,7 @@ async function ensureUser(input: { email: string; name: string; password: string
 }
 
 async function main() {
-  console.log("🌱 Seeding Componently database (empty workspaces)…");
+  console.log("🌱 Seeding Atomisense database (empty workspaces)…");
 
   // Clean slate
   await db.change.deleteMany();
@@ -64,7 +64,7 @@ async function main() {
 
   /* ---------- Users ---------- */
   const users = await Promise.all([
-    ensureUser({ email: "demo@componently.app", name: "Demo User", password: "demo1234" }),
+    ensureUser({ email: "demo@atomisense.app", name: "Demo User", password: "demo1234" }),
     ensureUser({ email: "rakhacimano@gmail.com", name: "Rakha", password: "Rakha123!" }),
   ]);
 
@@ -86,7 +86,7 @@ async function main() {
   console.log(`✅ Seeded ${users.length} user(s) with empty workspace(s). No demo data.`);
   console.log(`   sign in with:`);
   for (const u of users) {
-    const password = u.email === "demo@componently.app" ? "demo1234" : "Rakha123!";
+    const password = u.email === "demo@atomisense.app" ? "demo1234" : "Rakha123!";
     console.log(`     - ${u.email} / ${password}`);
   }
 }

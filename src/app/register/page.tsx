@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import { AuthForm } from "@/components/auth/auth-form";
 
 export const metadata = {
-  title: "Create your workspace — Componently",
+  title: "Create your workspace — Atomisense",
 };
 
 export default function RegisterPage() {

@@ -41,7 +41,7 @@ export function SiteFooter() {
                 </svg>
               </span>
               <span className="flex items-baseline gap-1.5">
-                <span className="text-[15px] font-semibold tracking-tight text-foreground">Componently</span>
+                <span className="text-[15px] font-semibold tracking-tight text-foreground">Atomisense</span>
                 <span className="font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">v1.0</span>
               </span>
             </Link>
@@ -89,7 +89,7 @@ export function SiteFooter() {
         {/* Bottom bar */}
         <div className="mt-8 flex flex-col items-center justify-between gap-3 border-t border-border/60 pt-6 sm:flex-row">
           <p className="font-mono text-[11px] text-muted-foreground">
-            © {new Date().getFullYear()} componently. built for design ops.
+            © {new Date().getFullYear()} atomisense. built for design ops.
           </p>
           <div className="flex items-center gap-4 font-mono text-[11px] text-muted-foreground">
             <Link href="#top" className="hover:text-foreground">privacy</Link>

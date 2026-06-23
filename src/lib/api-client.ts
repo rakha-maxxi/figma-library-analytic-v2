@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 /**
- * Typed API client for Componently.
+ * Typed API client for Atomisense.
  * All data fetching/mutations go through here. Dates arrive as ISO strings.
  */
 
@@ -349,7 +349,7 @@ export type ScanNotification = {
 };
 
 const NOTIF_MAX = 50;
-const NOTIF_STORAGE_PREFIX = "componently.scanNotif";
+const NOTIF_STORAGE_PREFIX = "atomisense.scanNotif";
 const NOTIF_SEEN_KEY = `${NOTIF_STORAGE_PREFIX}.seen`;
 const NOTIF_LIST_KEY = `${NOTIF_STORAGE_PREFIX}.list`;
 const NOTIF_LASTSEEN_KEY = `${NOTIF_STORAGE_PREFIX}.lastSeenAt`;

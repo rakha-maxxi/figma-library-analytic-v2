@@ -38,7 +38,7 @@ export function SiteHeader() {
     >
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         {/* Logo */}
-        <Link href="/" className="group flex items-center gap-2.5" aria-label="Componently home">
+        <Link href="/" className="group flex items-center gap-2.5" aria-label="Atomisense home">
           <span className="relative flex size-7 items-center justify-center rounded-md bg-foreground text-background">
             <svg viewBox="0 0 24 24" className="size-4" fill="currentColor" aria-hidden>
               <rect x="3" y="3" width="8" height="8" rx="1.5" />
@@ -49,7 +49,7 @@ export function SiteHeader() {
           </span>
           <span className="flex items-baseline gap-1.5">
             <span className="text-[15px] font-semibold tracking-tight text-foreground">
-              Componently
+              Atomisense
             </span>
             <span className="hidden font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground sm:inline">
               v1.0

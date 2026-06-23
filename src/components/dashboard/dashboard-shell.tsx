@@ -64,7 +64,7 @@ export function DashboardShell({ page }: { page: DashboardPage }) {
                 <rect x="13" y="13" width="8" height="8" rx="1.5" />
               </svg>
             </span>
-            <span className="text-sm font-semibold text-foreground">Componently</span>
+            <span className="text-sm font-semibold text-foreground">Atomisense</span>
           </div>
         </div>
 

@@ -66,7 +66,7 @@ export function Hero() {
           transition={{ duration: 0.5, ease: "easeOut", delay: 0.12 }}
           className="mt-6 max-w-xl text-pretty text-base leading-relaxed text-muted-foreground sm:text-lg"
         >
-          Componently tracks design system component usage across your registered
+          Atomisense tracks design system component usage across your registered
           Figma files — based on scan history. So Design Ops can stop opening
           files one by one and start making cleanup, deprecation, and adoption
           decisions from real data.
@@ -150,7 +150,7 @@ function ProductPreview() {
           </div>
           <div className="flex items-center gap-2 font-mono text-[10px] text-muted-foreground">
             <span className="size-1.5 rounded-full bg-emerald-500" />
-            componently.app / overview
+            atomisense.app / overview
           </div>
           <div className="font-mono text-[10px] text-muted-foreground">scan #128</div>
         </div>
@@ -168,7 +168,7 @@ function ProductPreview() {
                   <rect x="13" y="13" width="8" height="8" rx="1.5" />
                 </svg>
               </span>
-              <span className="text-xs font-semibold text-foreground">Componently</span>
+              <span className="text-xs font-semibold text-foreground">Atomisense</span>
             </div>
             <nav className="space-y-0.5 text-[12px]">
               <NavRow label="Overview" active />

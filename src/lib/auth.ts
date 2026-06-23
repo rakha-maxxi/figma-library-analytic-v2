@@ -8,11 +8,11 @@ import { hashPassword, verifyPassword } from "@/lib/password";
  *
  *  - Passwords: scrypt + per-user salt, stored as `salt:hash`.
  *  - Sessions: random token, hashed in DB. Cookie holds the raw token.
- *  - Cookie name: "componently_session".
+ *  - Cookie name: "atomisense_session".
  *  - Default TTL: 30 days, sliding (extended on each read).
  */
 
-export const SESSION_COOKIE = "componently_session";
+export const SESSION_COOKIE = "atomisense_session";
 export const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
 export { hashPassword, verifyPassword };

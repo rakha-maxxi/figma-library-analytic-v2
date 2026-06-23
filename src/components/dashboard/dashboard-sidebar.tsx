@@ -62,7 +62,7 @@ export function DashboardSidebar({ page }: { page: DashboardPage }) {
           <LogoMark />
           <span className="flex items-baseline gap-1.5">
             <span className="text-[15px] font-semibold tracking-tight text-foreground">
-              Componently
+              Atomisense
             </span>
             <span className="font-mono text-[9px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
               v1.0

@@ -1,5 +1,5 @@
 /**
- * Mock data for the Componently dashboard.
+ * Mock data for the Atomisense dashboard.
  * Realistic, PRD-aligned. Scoped to registered files & latest scan.
  *
  * NOTE: This is static seed data for the MVP front-end. A future backend

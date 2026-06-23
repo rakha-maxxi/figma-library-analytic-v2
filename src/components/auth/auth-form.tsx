@@ -56,7 +56,7 @@ export function AuthForm({ initialMode = "login" }: { initialMode?: Mode }) {
         transition={{ duration: 0.35, ease: "easeOut" }}
         className="w-full max-w-md rounded-2xl border border-border/70 bg-card p-8 shadow-sm"
       >
-        <Link href="/" className="inline-flex items-center gap-2.5" aria-label="Componently home">
+        <Link href="/" className="inline-flex items-center gap-2.5" aria-label="Atomisense home">
           <span className="flex size-7 items-center justify-center rounded-md bg-foreground text-background">
             <svg viewBox="0 0 24 24" className="size-4" fill="currentColor" aria-hidden>
               <rect x="3" y="3" width="8" height="8" rx="1.5" />
@@ -66,7 +66,7 @@ export function AuthForm({ initialMode = "login" }: { initialMode?: Mode }) {
             </svg>
           </span>
           <span className="text-[15px] font-semibold tracking-tight text-foreground">
-            Componently
+            Atomisense
           </span>
         </Link>
 
@@ -154,7 +154,7 @@ export function AuthForm({ initialMode = "login" }: { initialMode?: Mode }) {
         <div className="mt-6 text-center text-xs text-muted-foreground">
           {mode === "login" ? (
             <>
-              New to Componently?{" "}
+              New to Atomisense?{" "}
               <button
                 type="button"
                 onClick={() => setMode("register")}

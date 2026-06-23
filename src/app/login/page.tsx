@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import { AuthForm } from "@/components/auth/auth-form";
 
 export const metadata = {
-  title: "Sign in — Componently",
+  title: "Sign in — Atomisense",
 };
 
 export default function LoginPage() {

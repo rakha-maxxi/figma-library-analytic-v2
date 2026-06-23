@@ -79,7 +79,7 @@ export function Problem() {
                 often, and how has it changed over time?”
               </p>
               <p className="mt-3 font-mono text-[11px] text-background/50">
-                the one question componently is built to answer.
+                the one question atomisense is built to answer.
               </p>
             </div>
           </FadeIn>

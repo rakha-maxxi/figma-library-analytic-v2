@@ -7,7 +7,7 @@ import { NumberedSection } from "./primitives";
 import { cn } from "@/lib/utils";
 
 const FAQS = [
-  { q: "Does this replace Figma Library Analytics?", a: "No. Componently is a scoped tracker for registered Figma files based on scan history. It's a practical alternative for teams whose Figma plan doesn't include Library Analytics, or who want file-level tracking on top of it. It is not org-wide automatic analytics." },
+  { q: "Does this replace Figma Library Analytics?", a: "No. Atomisense is a scoped tracker for registered Figma files based on scan history. It's a practical alternative for teams whose Figma plan doesn't include Library Analytics, or who want file-level tracking on top of it. It is not org-wide automatic analytics." },
   { q: "Is the data real-time?", a: "No. Data reflects the latest successful scan, not real-time Figma activity. Every dashboard view shows the last scan timestamp so freshness is always clear. You can run a new scan anytime to refresh." },
   { q: "Which files are included in usage data?", a: "Only the Figma files you register as consumer files. Files you haven't registered are not included. You're responsible for maintaining tracking coverage as your product surface grows." },
   { q: "How are 'unused' and 'low usage' defined?", a: "Unused means zero instances across all registered files in the latest successful scan. Low usage means below a configurable threshold. You can tune the threshold in Settings as your adoption matures." },

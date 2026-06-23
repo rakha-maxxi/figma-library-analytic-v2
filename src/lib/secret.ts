@@ -8,7 +8,7 @@ import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:
  * login usable across restarts.
  */
 
-const SECRET = process.env.COMPONENTLY_SECRET || "componently-local-dev-secret";
+const SECRET = process.env.COMPONENTLY_SECRET || "atomisense-local-dev-secret";
 const KEY = createHash("sha256").update(SECRET).digest();
 
 export function encryptSecret(value: string): string {

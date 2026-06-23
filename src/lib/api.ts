@@ -65,7 +65,7 @@ function logApiMetrics(req: Request, res: Response, start: number, metrics: DbMe
   const url = new URL(req.url);
   const duration = Date.now() - start;
   const payload = res.headers.get("content-length") ?? "?";
-  const cache = res.headers.get("x-componently-cache") ?? "bypass";
+  const cache = res.headers.get("x-atomisense-cache") ?? "bypass";
   const slow = metrics.slow.length > 0 ? ` slow=${metrics.slow.join(" | ")}` : "";
   console.log(`[api] ${req.method} ${url.pathname} ${duration}ms db=${metrics.count} cache=${cache} payload=${payload}${slow}`);
 }
@@ -84,17 +84,17 @@ export async function cachedJson<T>(
   load: () => Promise<T>
 ) {
   if (!cacheAvailable()) {
-    return json(await load(), 200, { headers: { "x-componently-cache": "bypass" } });
+    return json(await load(), 200, { headers: { "x-atomisense-cache": "bypass" } });
   }
 
   const cached = await getCache<T>(key);
   if (cached.hit) {
-    return json(cached.value, 200, { headers: { "x-componently-cache": "hit" } });
+    return json(cached.value, 200, { headers: { "x-atomisense-cache": "hit" } });
   }
 
   const data = await load();
   await setCache(key, data, ttlSeconds);
-  return json(data, 200, { headers: { "x-componently-cache": "miss" } });
+  return json(data, 200, { headers: { "x-atomisense-cache": "miss" } });
 }
 
 export function apiError(err: unknown): Response {
