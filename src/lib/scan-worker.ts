@@ -21,11 +21,20 @@ type FigmaFileResponse = {
   components?: Record<string, FigmaComponentMetadata>;
 };
 
-async function fetchFigmaFile(figmaFileKey: string, figmaToken: string): Promise<FigmaFileResponse | null> {
-  const res = await fetch(
-    `https://api.figma.com/v1/files/${encodeURIComponent(figmaFileKey)}`,
-    { headers: { "X-Figma-Token": figmaToken }, cache: "no-store", signal: AbortSignal.timeout(45_000) }
-  );
+async function fetchFigmaFile(
+  figmaFileKey: string,
+  figmaToken: string,
+  options: { ids?: string[]; depth?: number; timeoutMs?: number } = {}
+): Promise<FigmaFileResponse | null> {
+  const url = new URL(`https://api.figma.com/v1/files/${encodeURIComponent(figmaFileKey)}`);
+  if (options.ids?.length) url.searchParams.set("ids", options.ids.join(","));
+  if (options.depth != null) url.searchParams.set("depth", String(options.depth));
+
+  const res = await fetch(url, {
+    headers: { "X-Figma-Token": figmaToken },
+    cache: "no-store",
+    signal: AbortSignal.timeout(options.timeoutMs ?? 45_000),
+  });
   if (!res.ok) return null;
   return res.json() as Promise<FigmaFileResponse>;
 }
@@ -124,6 +133,75 @@ function walkFileForInstances(
   }
 
   return Array.from(result.values());
+}
+
+function mergeInstanceMatches(
+  target: Map<string, { componentId: string; instances: number; page: string }>,
+  matches: { componentId: string; instances: number; page: string }[]
+) {
+  for (const match of matches) {
+    const key = `${match.componentId}|${match.page}`;
+    const existing = target.get(key);
+    if (existing) {
+      existing.instances += match.instances;
+    } else {
+      target.set(key, { ...match });
+    }
+  }
+}
+
+async function scanFigmaFileForInstances(
+  figmaFileKey: string,
+  figmaToken: string,
+  componentLookup: Map<string, string>
+): Promise<{ matches: { componentId: string; instances: number; page: string }[]; pageFailures: string[]; pagesScanned: number }> {
+  const firstPass = await fetchFigmaFile(figmaFileKey, figmaToken, { depth: 1, timeoutMs: 30_000 });
+  const pages = firstPass?.document?.children?.filter((node) => node.type === "CANVAS") ?? [];
+
+  // Files without page metadata are likely small enough to scan in one request.
+  if (pages.length === 0) {
+    const data = await fetchFigmaFile(figmaFileKey, figmaToken, { timeoutMs: 60_000 });
+    if (!data?.document) return { matches: [], pageFailures: ["Figma file inaccessible or returned no document."], pagesScanned: 0 };
+    return { matches: walkFileForInstances(data.document, componentLookup, data.components), pageFailures: [], pagesScanned: 1 };
+  }
+
+  const merged = new Map<string, { componentId: string; instances: number; page: string }>();
+  const pageFailures: string[] = [];
+  let pagesScanned = 0;
+  const chunkSize = 4;
+
+  for (let i = 0; i < pages.length; i += chunkSize) {
+    const chunk = pages.slice(i, i + chunkSize);
+    try {
+      const data = await fetchFigmaFile(figmaFileKey, figmaToken, {
+        ids: chunk.map((page) => page.id),
+        timeoutMs: 60_000,
+      });
+      if (data?.document) {
+        mergeInstanceMatches(merged, walkFileForInstances(data.document, componentLookup, data.components));
+        pagesScanned += chunk.length;
+        continue;
+      }
+    } catch {
+      // Fall back to individual page fetches below.
+    }
+
+    for (const page of chunk) {
+      try {
+        const data = await fetchFigmaFile(figmaFileKey, figmaToken, { ids: [page.id], timeoutMs: 60_000 });
+        if (!data?.document) {
+          pageFailures.push(page.name);
+          continue;
+        }
+        mergeInstanceMatches(merged, walkFileForInstances(data.document, componentLookup, data.components));
+        pagesScanned++;
+      } catch {
+        pageFailures.push(page.name);
+      }
+    }
+  }
+
+  return { matches: Array.from(merged.values()), pageFailures, pagesScanned };
 }
 
 type FigmaDocNode = {
@@ -317,14 +395,13 @@ export async function runScan(scanJobId: string): Promise<ScanRunResult> {
 
     for (const file of targetFiles) {
       try {
-        const data = await fetchFigmaFile(file.figmaFileKey, figmaToken);
-        if (!data?.document) {
+        const { matches, pageFailures, pagesScanned } = await scanFigmaFileForInstances(file.figmaFileKey, figmaToken, componentLookup);
+        if (pagesScanned === 0) {
           filesFailed++;
-          fileErrors.push(`${file.name}: Figma file inaccessible or returned no document.`);
+          fileErrors.push(`${file.name}: failed to scan ${pageFailures.slice(0, 3).join(", ")}.`);
           continue;
         }
 
-        const matches = walkFileForInstances(data.document, componentLookup, data.components);
         for (const m of matches) {
           rows.push({
             componentId: m.componentId,
@@ -336,6 +413,9 @@ export async function runScan(scanJobId: string): Promise<ScanRunResult> {
 
         successfullyScannedFileIds.add(file.id);
         filesOk++;
+        if (pageFailures.length > 0) {
+          fileErrors.push(`${file.name}: partial scan, ${pageFailures.length} page(s) failed.`);
+        }
       } catch (err) {
         filesFailed++;
         fileErrors.push(`${file.name}: ${err instanceof Error ? err.message : "fetch failed"}`);
