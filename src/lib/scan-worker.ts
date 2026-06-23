@@ -313,12 +313,14 @@ export async function runScan(scanJobId: string): Promise<ScanRunResult> {
     let filesFailed = 0;
     const rows: UsageRow[] = [];
     const successfullyScannedFileIds = new Set<string>();
+    const fileErrors: string[] = [];
 
     for (const file of targetFiles) {
       try {
         const data = await fetchFigmaFile(file.figmaFileKey, figmaToken);
         if (!data?.document) {
           filesFailed++;
+          fileErrors.push(`${file.name}: Figma file inaccessible or returned no document.`);
           continue;
         }
 
@@ -334,9 +336,29 @@ export async function runScan(scanJobId: string): Promise<ScanRunResult> {
 
         successfullyScannedFileIds.add(file.id);
         filesOk++;
-      } catch {
+      } catch (err) {
         filesFailed++;
+        fileErrors.push(`${file.name}: ${err instanceof Error ? err.message : "fetch failed"}`);
       }
+    }
+
+    if (filesOk === 0) {
+      const err = fileErrors.length > 0
+        ? `No files could be scanned. ${fileErrors.slice(0, 3).join(" ")}`
+        : "No files could be scanned.";
+      await db.scanJob.update({
+        where: { id: job.id },
+        data: {
+          status: "Failed",
+          error: err,
+          finishedAt: new Date(),
+          durationMs: Date.now() - startedAt,
+          filesOk,
+          filesFailed,
+        },
+      });
+      await invalidateWorkspaceScanCache(job.workspaceId);
+      return { scanJobId, status: "Failed", filesOk, filesFailed, snapshotId: null, error: err };
     }
 
     const enabledFileIds = new Set(enabledFiles.map((f) => f.id));
