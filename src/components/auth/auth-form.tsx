@@ -4,6 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
+import { Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/components/auth/auth-provider";
 
@@ -22,6 +23,7 @@ export function AuthForm({ initialMode = "login" }: { initialMode?: Mode }) {
   const [workspaceName, setWorkspaceName] = React.useState("");
   const [submitting, setSubmitting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const [showPassword, setShowPassword] = React.useState(false);
 
   React.useEffect(() => {
     if (user) router.replace(next);
@@ -110,10 +112,21 @@ export function AuthForm({ initialMode = "login" }: { initialMode?: Mode }) {
             value={password}
             onChange={setPassword}
             placeholder="••••••••"
-            type="password"
+            type={showPassword ? "text" : "password"}
             autoComplete={mode === "login" ? "current-password" : "new-password"}
             required
             minLength={8}
+            suffix={
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                aria-label={showPassword ? "Hide password" : "Show password"}
+                tabIndex={-1}
+              >
+                {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+              </button>
+            }
           />
 
           {error && (
@@ -177,6 +190,7 @@ function Field({
   autoComplete,
   required,
   minLength,
+  suffix,
 }: {
   label: string;
   value: string;
@@ -186,22 +200,26 @@ function Field({
   autoComplete?: string;
   required?: boolean;
   minLength?: number;
+  suffix?: React.ReactNode;
 }) {
   return (
     <label className="flex flex-col gap-1.5">
       <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
         {label}
       </span>
-      <input
-        type={type}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        autoComplete={autoComplete}
-        required={required}
-        minLength={minLength}
-        className="h-10 rounded-md border border-border/70 bg-background px-3 text-sm text-foreground placeholder:text-muted-foreground/70 focus:border-foreground/30 focus:outline-none focus:ring-2 focus:ring-ring/40"
-      />
+      <div className="relative">
+        <input
+          type={type}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          autoComplete={autoComplete}
+          required={required}
+          minLength={minLength}
+          className="h-10 w-full rounded-md border border-border/70 bg-background px-3 text-sm text-foreground placeholder:text-muted-foreground/70 focus:border-foreground/30 focus:outline-none focus:ring-2 focus:ring-ring/40"
+        />
+        {suffix}
+      </div>
     </label>
   );
 }
