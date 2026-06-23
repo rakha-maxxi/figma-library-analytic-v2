@@ -1,6 +1,9 @@
+import { after } from "next/server";
 import { db, cachedJson, json, qs, withWorkspace } from "@/lib/api";
 import { invalidateWorkspaceScanCache, workspaceCacheKey } from "@/lib/cache";
-import { runScan, triggerScanInBackground } from "@/lib/scan-worker";
+import { runScan } from "@/lib/scan-worker";
+
+export const maxDuration = 300;
 
 /** Auto-recover scans stuck in Pending/Running for more than 5 minutes. */
 async function recoverStuckScans(workspaceId: string) {
@@ -121,9 +124,9 @@ export const POST = withWorkspace(async (req, ctx) => {
   });
   await invalidateWorkspaceScanCache(ctx.workspaceId);
 
-  // Run the worker in the background. The POST returns immediately so the
-  // dashboard can poll /api/scans and watch Pending → Running → Success.
-  triggerScanInBackground(job.id);
+  // Vercel may terminate fire-and-forget promises after the response.
+  // `after` registers this as post-response work within the function lifecycle.
+  after(() => runScan(job.id));
 
   return json(
     {

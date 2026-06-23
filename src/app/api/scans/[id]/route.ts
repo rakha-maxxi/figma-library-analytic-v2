@@ -1,6 +1,9 @@
+import { after } from "next/server";
 import { db, json, withWorkspace } from "@/lib/api";
 import { invalidateWorkspaceScanCache } from "@/lib/cache";
-import { triggerScanInBackground } from "@/lib/scan-worker";
+import { runScan } from "@/lib/scan-worker";
+
+export const maxDuration = 300;
 
 /**
  * GET /api/scans/:id
@@ -38,8 +41,8 @@ export const PATCH = withWorkspace(
         data: { status: "Pending", error: null, startedAt: new Date() },
       });
       await invalidateWorkspaceScanCache(ctx.workspaceId);
-      // Re-run the worker in the background.
-      triggerScanInBackground(id);
+      // Re-run after the response without relying on unsafe fire-and-forget promises.
+      after(() => runScan(id));
       return json(updated);
     }
 

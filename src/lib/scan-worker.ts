@@ -24,7 +24,7 @@ type FigmaFileResponse = {
 async function fetchFigmaFile(figmaFileKey: string, figmaToken: string): Promise<FigmaFileResponse | null> {
   const res = await fetch(
     `https://api.figma.com/v1/files/${encodeURIComponent(figmaFileKey)}`,
-    { headers: { "X-Figma-Token": figmaToken }, cache: "no-store" }
+    { headers: { "X-Figma-Token": figmaToken }, cache: "no-store", signal: AbortSignal.timeout(45_000) }
   );
   if (!res.ok) return null;
   return res.json() as Promise<FigmaFileResponse>;
@@ -256,10 +256,23 @@ export async function runScan(scanJobId: string): Promise<ScanRunResult> {
       }
     }
 
-    // Backfill component keys from the source UI Kit metadata so older imports still scan correctly.
+    // Backfill component keys from source metadata only when older imports need it.
+    // This fetch can be expensive for large UI kits, so it must not block normal scans.
     const componentKeyUpdates: { id: string; figmaComponentKey: string }[] = [];
     for (const kit of sourceKits) {
-      const sourceFile = await fetchFigmaFile(kit.figmaFileKey, figmaToken);
+      const needsBackfill = components.some(
+        (component) => component.sourceUiKitId === kit.id && component.figmaNodeKey && !component.figmaComponentKey
+      );
+      if (!needsBackfill) continue;
+
+      let sourceFile: FigmaFileResponse | null = null;
+      try {
+        sourceFile = await fetchFigmaFile(kit.figmaFileKey, figmaToken);
+      } catch (err) {
+        console.warn("[scan] skipped source UI Kit key backfill:", err instanceof Error ? err.message : String(err));
+        continue;
+      }
+
       for (const [nodeId, meta] of Object.entries(sourceFile?.components ?? {})) {
         if (!meta.key) continue;
         const component = componentsBySourceNode.get(`${kit.id}|${normalizeFigmaNodeId(nodeId)}`);
